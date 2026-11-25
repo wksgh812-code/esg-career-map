@@ -1,0 +1,26 @@
+{
+  "checked_at": "2026-11-25T16:57:20.564750Z",
+  "params_sent": {
+    "authKey": "***",
+    "callTp": "L",
+    "returnType": "XML",
+    "startPage": "1",
+    "display": "5",
+    "keyword": "ESG"
+  },
+  "results": [
+    {
+      "url": "https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do",
+      "status": 200,
+      "content_type": "application/xml;charset=UTF-8",
+      "body_chars": 99,
+      "body_head": "<?xml version='1.0' encoding='UTF-8'?>\n<GO24>\n  <error>신청하신 OpenApi 서비스가 존재하지 않습니다</error>\n</GO24>\n"
+    },
+    {
+      "url": "https://www.work24.go.kr/cm/openApi/call/wk/callOpenApi210L01.do",
+      "error": "<HTTPError 404: ''>",
+      "body_chars": 1357,
+      "body_head": "\t\t\t<html lang='ko'><head>\t\t\t\t<meta charset='utf-8'>\t\t\t\t<link rel='icon' href='/cm/static/images/work24_logo_ico.png'><!-- favicon -->\t\t\t\t<title>고용24</title>\t\t\t\t<script type='text/javascript'>\t\t\t\t</script>\t\t\t\t<style>\t\t\t\t.error {\t\t\t\t    width: 100%;\t\t\t\t    height: 100%;\t\t\t\t}\t\t\t\t.msg{\t\t\t\t   margin-top:"
+    }
+  ]
+}
