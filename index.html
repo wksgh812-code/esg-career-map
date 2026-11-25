@@ -36,14 +36,21 @@ button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
 .top-in{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.brand{font-weight:700;font-size:18px;letter-spacing:-.01em;display:flex;align-items:baseline;gap:10px}
+.brand{font-weight:700;font-size:18px;letter-spacing:-.01em;display:flex;flex-direction:column;line-height:1.25}
+.qbar{flex:1;display:flex;gap:8px;min-width:0;max-width:760px}
+.qf{flex:1;min-width:0;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px}
+.qf:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.qf label{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.qf input{flex:1;min-width:0;border:0;background:transparent;padding:10px 0;outline:none}
+.qclear{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:4px}
+mark{background:var(--job-soft);color:inherit;border-radius:3px;padding:0 1px}
+.hit{font-size:11px;color:var(--job);font-weight:600}
 .brand small{font-weight:400;font-size:12px;color:var(--muted)}
 .stat{margin-left:auto;display:flex;gap:18px;font-size:12px;color:var(--muted)}
 .stat b{font-family:var(--mono);font-weight:500;color:var(--ink);font-size:14px;margin-right:3px}
-.app{display:grid;grid-template-columns:minmax(300px,380px) 1fr;min-height:calc(100% - 60px)}
-.side{border-right:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-width:0}
+.app{display:grid;grid-template-columns:minmax(300px,360px) 1fr;align-items:start}
+.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--hdr,64px));height:calc(100vh - env(safe-area-inset-top,0px) - var(--hdr,64px));height:calc(100dvh - env(safe-area-inset-top,0px) - var(--hdr,64px));border-right:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-width:0;overflow:hidden}
 .filters{padding:14px 16px;display:grid;gap:10px;border-bottom:1px solid var(--line)}
-.search{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{border:0;background:transparent;padding:5px 12px;font-size:13px;cursor:pointer}
@@ -98,7 +105,10 @@ section{display:grid;gap:12px}
 .foot{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
-  .side{border-right:0}
+  .top{position:static}
+  .side{border-right:0;position:static;height:auto;overflow:visible}
+  .list{overflow:visible}
+  .qbar{flex-basis:100%;flex-direction:column;max-width:none}
   .app.detail .side{display:none}
   .app:not(.detail) .main{display:none}
   .back{display:inline-block}
@@ -111,14 +121,17 @@ section{display:grid;gap:12px}
 <body>
 
 <header class="top"><div class="top-in">
-  <div class="brand">ESG 커리어 맵 <small>시제품 · 사회공헌백서 2022–2025 기반</small></div>
+  <div class="brand">ESG 커리어 맵 <small>사회공헌백서 2022–2025 기반</small></div>
+  <div class="qbar" role="search">
+    <div class="qf"><label for="qn">기업명</label><input id="qn" type="search" placeholder="예: 삼성전자, 한국전력" autocomplete="off"><button class="qclear" data-for="qn" aria-label="기업명 지우기" hidden>×</button></div>
+    <div class="qf"><label for="qk">키워드</label><input id="qk" type="search" placeholder="예: 탄소, 장애인, 장학" autocomplete="off"><button class="qclear" data-for="qk" aria-label="키워드 지우기" hidden>×</button></div>
+  </div>
   <div class="stat"><span><b id="s-org">–</b>기업·기관</span><span><b id="s-prog">–</b>프로그램</span></div>
 </div></header>
 
 <div class="app" id="app">
   <aside class="side" aria-label="기업 목록">
     <div class="filters">
-      <input id="q" class="search" type="search" placeholder="기업명 또는 키워드 (예: 탄소, 장애인, 장학)" aria-label="검색">
       <div class="row">
         <div class="seg" role="group" aria-label="구분">
           <button data-type="기업" aria-pressed="true">기업</button>
@@ -144,7 +157,7 @@ const EDS=[2022,2023,2024,2025];
 const FIELDS=['사회복지','교육','환경','지역상생','문화예술·체육','인재양성·일자리','보건의료','안전','주거·생활'];
 const NOTE={'한화오션':'2022년판은 대우조선해양','HD현대인프라코어':'2022년판은 현대두산인프라코어','동국제강':'2023년판은 동국홀딩스','삼성E&A':'구 삼성엔지니어링','HD현대미포':'구 현대미포조선'};
 const ESGKW=['ESG','지속가능','사회공헌','CSR'];
-let P=[],ORGS=[],state={q:'',type:'기업',sort:'years',field:'',cur:null,ed:null};
+let P=[],ORGS=[],state={n:'',k:'',type:'기업',sort:'years',field:'',cur:null,ed:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 try{const s=JSON.parse(localStorage.getItem('ecm')||'{}');if(s.type!==undefined)state.type=s.type;if(s.sort)state.sort=s.sort}catch(e){}
@@ -167,19 +180,21 @@ function renderFilters(){
   $('#sort').value=state.sort;
 }
 function filtered(){
-  const q=state.q.trim().toLowerCase();
-  let r=ORGS.filter(o=>(!state.type||o.type===state.type)&&(!state.field||o.fields[state.field])&&(!q||o.name.toLowerCase().includes(q)||o.progs.some(p=>p._t.includes(q))));
+  const n=state.n.trim().toLowerCase().replace(/\s+/g,''),k=state.k.trim().toLowerCase();
+  let r=ORGS.filter(o=>{o.hits=k?o.progs.filter(p=>p._t.includes(k)).length:0;
+    return (!state.type||o.type===state.type)&&(!state.field||o.fields[state.field])&&(!n||o.name.toLowerCase().replace(/\s+/g,'').includes(n)||[...o.raw].some(x=>x.toLowerCase().replace(/\s+/g,'').includes(n)))&&(!k||o.hits>0)});
   const s=state.sort;
   r.sort((a,b)=>s==='name'?a.name.localeCompare(b.name,'ko'):s==='count'?b.progs.length-a.progs.length||a.name.localeCompare(b.name,'ko'):b.eds.size-a.eds.size||b.progs.length-a.progs.length||a.name.localeCompare(b.name,'ko'));
   return r;
 }
 function renderList(){
   const r=filtered();
-  $('#count').textContent=`${r.length}곳`+(state.q?` · '${state.q}' 검색 결과`:'');
+  const cond=[state.n&&`기업명 '${state.n}'`,state.k&&`키워드 '${state.k}'`].filter(Boolean).join(' · ');
+  $('#count').textContent=`${r.length}곳`+(cond?` · ${cond}`:'');
   $('#list').innerHTML=r.length?r.map(o=>`<li><a class="item" href="#${o.id}" aria-current="${state.cur===o.id}">
     <span class="nm">${esc(o.name)}</span>
     <span class="yrs" aria-label="수록 연도">${EDS.map(e=>`<span class="yr ${o.eds.has(e)?'on':''}" title="${e}년판">${String(e).slice(2)}</span>`).join('')}</span>
-    <span class="sub">${o.progs.length}개 프로그램 · ${esc(o.top.join(', ')||'분야 미분류')}</span></a></li>`).join('')
+    <span class="sub">${state.k?`<span class="hit">키워드 일치 ${o.hits}건</span> · `:''}${o.progs.length}개 프로그램 · ${esc(o.top.join(', ')||'분야 미분류')}</span></a></li>`).join('')
     :'<li class="empty">조건에 맞는 기업이 없습니다. 검색어나 분야를 바꿔 보세요.</li>';
 }
 function jobLinks(n){
@@ -199,10 +214,12 @@ function renderDetail(){
   if(!o){main.innerHTML=`<div><div class="eyebrow">시작하기</div><h1>왼쪽 목록에서 기업을 선택하세요</h1>
     <p>사회공헌백서 2022–2025년판 부록에 실린 대표 사회공헌 프로그램과, 해당 기업의 채용공고 검색 바로가기를 보여 줍니다.</p></div>`;return}
   const eds=[...o.eds].sort((a,b)=>b-a);
-  if(!state.ed||!o.eds.has(state.ed))state.ed=eds[0];
+  if(!state.ed||!o.eds.has(state.ed)){const kl=state.k.trim().toLowerCase();state.ed=(kl&&eds.find(e=>o.progs.some(p=>p.edition===e&&p._t.includes(kl))))||eds[0]}
   const progs=o.progs.filter(p=>p.edition===state.ed);
   const starts=o.progs.map(p=>+p.start_year).filter(Boolean);
-  const kws=state.q.trim().toLowerCase();
+  const kw=state.k.trim();
+  const hl=t=>{const e=esc(t);if(!kw)return e;const re=new RegExp(esc(kw).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');return e.replace(re,m=>`<mark>${m}</mark>`)};
+  if(kw)progs.sort((a,b)=>(b._t.includes(kw.toLowerCase()))-(a._t.includes(kw.toLowerCase())));
   main.innerHTML=`
   <a class="back" href="#">← 목록으로</a>
   <div>
@@ -221,10 +238,10 @@ function renderDetail(){
     <h2 id="h-csr">사회공헌 활동 <span class="n">${progs.length}건 · ${state.ed}년판(${state.ed-1}년 기준)</span></h2>
     <div class="tabs" role="tablist">${eds.map(e=>`<button role="tab" data-ed="${e}" aria-selected="${e===state.ed}">${e}년판</button>`).join('')}</div>
     <div>${progs.map(p=>`<article class="prog">
-      <h3>${esc(p.program)}</h3>
+      <h3>${hl(p.program)}</h3>
       <div class="pm">${p.field_std?`<span>분야 <b>${esc(p.field_std)}</b></span>`:''}${p.target_std?`<span>대상 <b>${esc(p.target_std)}</b></span>`:''}
         ${p.start_year?`<span>시작 <b>${p.start_year}</b></span>`:''}${p.esg?`<span>ESG <b>${p.esg}</b></span>`:''}${p.purpose?`<span>목적 <b>${esc(p.purpose)}</b></span>`:''}</div>
-      <p>${esc(p.description)}</p>
+      <p>${hl(p.description)}</p>
       <div class="pm src">사회공헌백서 ${p.edition} 부록 p.${p.page}</div></article>`).join('')}</div>
   </section>
   <section class="jobs" aria-labelledby="h-job">
@@ -244,7 +261,12 @@ function route(){
   if(state.cur&&window.innerWidth<=760)window.scrollTo(0,0);
 }
 window.addEventListener('hashchange',route);
-let t;$('#q').addEventListener('input',e=>{clearTimeout(t);t=setTimeout(()=>{state.q=e.target.value;renderList()},150)});
+let t;
+['qn','qk'].forEach(id=>{const el=$('#'+id),key=id==='qn'?'n':'k';
+  el.addEventListener('input',()=>{document.querySelector(`.qclear[data-for="${id}"]`).hidden=!el.value;clearTimeout(t);t=setTimeout(()=>{state[key]=el.value;state.ed=null;renderList();renderDetail()},150)})});
+document.querySelectorAll('.qclear').forEach(b=>b.onclick=()=>{const el=$('#'+b.dataset.for);el.value='';el.dispatchEvent(new Event('input'));el.focus()});
+const setHdr=()=>document.documentElement.style.setProperty('--hdr',document.querySelector('.top').offsetHeight+'px');
+setHdr();window.addEventListener('resize',setHdr);
 document.querySelector('.seg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.type=b.dataset.type;save();renderFilters();renderList()});
 $('#sort').addEventListener('change',e=>{state.sort=e.target.value;save();renderList()});
 $('#fields').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;state.field=b.dataset.f;renderFilters();renderList()});
