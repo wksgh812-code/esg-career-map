@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-11-25T17:29:19.541803Z",
+  "results": [
+    {
+      "url": "https://apis.data.go.kr/1051000/recruitment/list",
+      "variant": "key_as_is",
+      "error": "<HTTPError 403: 'Forbidden'>",
+      "body_chars": 192,
+      "body_head": "{\n  \"OpenAPI_ServiceResponse\": {\n    \"cmmMsgHeader\": {\n      \"errMsg\": \"SERVICE_KEY_IS_NOT_REGISTERED_ERROR\",\n      \"returnAuthMsg\": \"등록되지 않은 서비스키\",\n      \"returnReasonCode\": \"30\"\n    }\n  }\n}\n"
+    },
+    {
+      "url": "https://apis.data.go.kr/1051000/recruitment/list",
+      "variant": "key_encoded",
+      "error": "<HTTPError 403: 'Forbidden'>",
+      "body_chars": 192,
+      "body_head": "{\n  \"OpenAPI_ServiceResponse\": {\n    \"cmmMsgHeader\": {\n      \"errMsg\": \"SERVICE_KEY_IS_NOT_REGISTERED_ERROR\",\n      \"returnAuthMsg\": \"등록되지 않은 서비스키\",\n      \"returnReasonCode\": \"30\"\n    }\n  }\n}\n"
+    }
+  ]
+}
