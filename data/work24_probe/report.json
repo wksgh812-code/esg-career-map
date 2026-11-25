@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-11-25T16:57:20.564750Z",
+  "checked_at": "2026-11-25T17:14:07.421871Z",
   "params_sent": {
     "authKey": "***",
     "callTp": "L",
@@ -14,7 +14,7 @@
       "status": 200,
       "content_type": "application/xml;charset=UTF-8",
       "body_chars": 99,
-      "body_head": "<?xml version='1.0' encoding='UTF-8'?>\n<GO24>\n  <error>신청하신 OpenApi 서비스가 존재하지 않습니다</error>\n</GO24>\n"
+      "body_head": "<?xml version='1.0' encoding='UTF-8'?>\n<GO24>\n  <error>개인회원은 사용할 수 없는 OPEN-API입니다.</error>\n</GO24>\n"
     },
     {
       "url": "https://www.work24.go.kr/cm/openApi/call/wk/callOpenApi210L01.do",

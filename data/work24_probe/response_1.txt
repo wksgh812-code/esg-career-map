@@ -1,4 +1,4 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <GO24>
-  <error>신청하신 OpenApi 서비스가 존재하지 않습니다</error>
+  <error>개인회원은 사용할 수 없는 OPEN-API입니다.</error>
 </GO24>
