@@ -37,6 +37,10 @@ button,input,select{font:inherit;color:inherit}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
 .top-in{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .brand{font-weight:700;font-size:18px;letter-spacing:-.01em;display:flex;flex-direction:column;line-height:1.25}
+.nav{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
+.nav a{padding:6px 12px;border-radius:7px;text-decoration:none;color:var(--muted);font-size:14px;font-weight:500;white-space:nowrap}
+.nav a:hover{color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .08);font-weight:600}
 .qbar{flex:1;display:flex;gap:8px;min-width:0;max-width:760px}
 .qf{flex:1;min-width:0;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px}
 .qf:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -122,6 +126,11 @@ section{display:grid;gap:12px}
 
 <header class="top"><div class="top-in">
   <div class="brand">ESG 커리어 맵 <small>사회공헌백서 2022–2025 기반</small></div>
+  <nav class="nav" aria-label="주 메뉴">
+    <a href="./" aria-current="page">ESG 기업</a>
+    <a href="experiences.html">경험 키워드</a>
+    <a href="coverletter.html">자기소개서</a>
+  </nav>
   <div class="qbar" role="search">
     <div class="qf"><label for="qn">기업명</label><input id="qn" type="search" placeholder="예: 삼성전자, 한국전력" autocomplete="off"><button class="qclear" data-for="qn" aria-label="기업명 지우기" hidden>×</button></div>
     <div class="qf"><label for="qk">키워드</label><input id="qk" type="search" placeholder="예: 탄소, 장애인, 장학" autocomplete="off"><button class="qclear" data-for="qk" aria-label="키워드 지우기" hidden>×</button></div>

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>경험 키워드 · ESG 커리어 맵</title>
+<meta name="description" content="내 경험을 상황·과제·행동·결과로 정리하고 키워드와 역량을 연결합니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/base.css">
+<style>
+.compmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.comp{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);display:grid;gap:6px;align-content:start}
+.comp.zero{opacity:.6}
+.comp b{font-size:14.5px}
+.comp .cnt{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.comp ul{margin:0;padding:0;list-style:none;display:grid;gap:2px;font-size:13px}
+.comp a{text-decoration:none}
+.star{display:grid;gap:12px}
+.star .field>span b{color:var(--accent);font-family:var(--mono);margin-right:4px}
+.save-state{font-size:12px;color:var(--muted)}
+.kwsec{display:grid;gap:8px}
+.kwsec h3{font-size:13px;color:var(--muted);font-weight:600}
+.addkw{display:flex;gap:6px;flex-wrap:wrap}
+.addkw .input{flex:1;min-width:140px}
+.addkw .select{width:auto}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <a class="brand" href="./">ESG 커리어 맵 <small>사회공헌백서 2022–2025 기반</small></a>
+  <nav class="nav" aria-label="주 메뉴">
+    <a href="./">ESG 기업</a>
+    <a href="experiences.html" aria-current="page">경험 키워드</a>
+    <a href="coverletter.html">자기소개서</a>
+  </nav>
+  <div class="top-tools">
+    <button class="btn ghost" id="backup" type="button">백업·복원</button>
+    <button class="btn" id="ai-set" type="button">AI 설정</button>
+  </div>
+</div></header>
+
+<div class="app">
+  <aside class="side" aria-label="내 경험 목록">
+    <div class="side-head">
+      <div class="row" style="justify-content:space-between"><h2>내 경험 <span class="num" id="exp-n" style="color:var(--muted);font-weight:400"></span></h2>
+        <button class="btn primary" id="new-exp" type="button">+ 새 경험</button></div>
+      <a href="#" id="to-map" style="font-size:13px">역량 지도 보기</a>
+    </div>
+    <ul class="list" id="exp-list"></ul>
+  </aside>
+  <main class="main"><div class="page" id="page"></div></main>
+</div>
+
+<script type="module">
+import { COMPETENCIES, compName, EXP_TYPES, suggestKeywords, load, save, uid, strengths, expText, expSummary, toast, esc, setHeaderHeight, ensureExamples, openBackup } from './assets/store.js';
+import { bindSettingsButton, hasKey, json, errorMessage } from './assets/ai.js';
+
+let P = load();
+let cur = null;
+const $ = s => document.querySelector(s);
+setHeaderHeight();
+bindSettingsButton($('#ai-set'), () => cur && renderEditor());
+
+ensureExamples(P);
+
+function persist(msg) {
+  const ok = save(P);
+  const st = $('#save-state'); if (st) st.textContent = ok ? '이 브라우저에 저장됨' : '저장 실패: 브라우저 저장소를 쓸 수 없습니다';
+  if (msg) toast(msg);
+  renderList();
+}
+
+function renderList() {
+  $('#exp-n').textContent = P.experiences.length;
+  const items = [...P.experiences].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  $('#exp-list').innerHTML = items.length ? items.map(e => `<li><a class="item" href="#${e.id}" aria-current="${cur === e.id}">
+      <span class="nm">${esc(e.title || '제목 없는 경험')}</span>
+      <span class="sub">${esc(e.type || '기타')} · 키워드 ${(e.keywords || []).length}개 · ${esc((e.competencies || []).map(compName).slice(0, 3).join(', ') || '역량 미연결')}</span></a></li>`).join('')
+    : '<li class="empty">아직 등록한 경험이 없습니다. "+ 새 경험"으로 첫 경험을 적어 보세요.</li>';
+}
+
+function renderMap() {
+  const s = strengths(P);
+  const byComp = Object.fromEntries(s.competencies.map(c => [c.id, c]));
+  const expById = Object.fromEntries(P.experiences.map(e => [e.id, e]));
+  $('#page').innerHTML = `<div><div class="eyebrow">경험 키워드</div><h1>역량 지도</h1>
+    <p class="lead">경험마다 키워드를 달고 역량에 연결하면, 어떤 역량을 어떤 경험으로 증명할 수 있는지 한눈에 보입니다. 비어 있는 역량은 아직 근거 경험이 없다는 뜻입니다.</p></div>
+    <div class="panel"><div class="panel-head"><h2>자주 쓰인 강점 키워드</h2><span class="note">경험 ${P.experiences.length}개 기준</span></div>
+      <div class="chips">${s.keywords.length ? s.keywords.map(k => `<span class="chip on">${esc(k.kw)} <small>${k.count}</small></span>`).join('') : '<span class="note">경험에 키워드를 등록하면 여기에 모입니다.</span>'}</div></div>
+    <div class="compmap">${COMPETENCIES.map(c => { const v = byComp[c.id]; return `<div class="comp ${v ? '' : 'zero'}">
+      <div class="row" style="justify-content:space-between"><b>${c.name}</b><span class="cnt">${v ? v.count : 0}개 경험</span></div>
+      <span class="note">${c.desc}</span>
+      ${v ? `<ul>${[...new Set(v.exps)].map(id => expById[id] ? `<li><a href="#${id}">${esc(expById[id].title || '제목 없음')}</a></li>` : '').join('')}</ul>` : ''}</div>`; }).join('')}</div>`;
+}
+
+const STAR = [
+  ['situation', 'S', '상황', '언제, 어디서, 어떤 문제가 있었나요?'],
+  ['task', 'T', '과제', '내가 맡은 목표나 해결해야 할 일은 무엇이었나요?'],
+  ['action', 'A', '행동', '내가 구체적으로 무엇을 했나요? (방법, 협업, 판단 근거)'],
+  ['result', 'R', '결과', '무엇이 달라졌나요? 숫자로 말할 수 있으면 좋습니다.'],
+];
+
+function renderEditor() {
+  const e = P.experiences.find(x => x.id === cur);
+  if (!e) { cur = null; renderMap(); renderList(); return; }
+  e.keywords ||= []; e.competencies ||= [];
+  $('#page').innerHTML = `
+    <div class="row" style="justify-content:space-between;align-items:flex-end">
+      <div><div class="eyebrow">경험 키워드${e.example ? ' · 예시 경험' : ''}</div><h1 id="ttl">${esc(e.title || '새 경험')}</h1></div>
+      <div class="row"><span class="save-state" id="save-state">이 브라우저에 저장됨</span><button class="btn danger" id="del" type="button">삭제</button></div>
+    </div>
+    <div class="panel">
+      <div class="grid2">
+        <label class="field"><span>경험 제목</span><input class="input" id="f-title" value="${esc(e.title)}" placeholder="예: 지역아동센터 코딩 멘토링"></label>
+        <label class="field"><span>유형</span><select class="select" id="f-type">${EXP_TYPES.map(t => `<option ${t === e.type ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label class="field"><span>기간</span><input class="input" id="f-period" value="${esc(e.period)}" placeholder="예: 2024.03 – 2024.08"></label>
+        <label class="field"><span>내 역할</span><input class="input" id="f-role" value="${esc(e.role)}" placeholder="예: 팀장, 디자이너, 멘토"></label>
+      </div>
+      <div class="star">${STAR.map(([k, b, n, h]) => `<label class="field"><span><b>${b}</b>${n} <small>${h}</small></span><textarea class="textarea" id="f-${k}" rows="3">${esc(e[k])}</textarea></label>`).join('')}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>경험 키워드</h2><span class="note">키워드를 추가하면 연결 역량이 자동으로 켜집니다</span></div>
+      <div class="kwsec"><h3>제안 키워드 <span class="note" style="font-weight:400">· 쓴 내용을 바탕으로 제안합니다. 눌러서 추가하세요</span></h3><div class="chips" id="sugg"></div></div>
+      <div class="kwsec" id="ai-sugg-wrap" hidden><h3>AI 제안</h3><div class="chips" id="ai-sugg"></div></div>
+      <div class="row"><button class="btn" id="ai-kw" type="button">AI로 키워드 더 제안받기</button><span class="ai-status" id="ai-kw-st"></span></div>
+      <div class="kwsec"><h3>등록한 키워드</h3><div class="chips" id="mine"></div></div>
+      <div class="addkw"><input class="input" id="kw-new" placeholder="직접 입력 (예: 예산 관리)" maxlength="20">
+        <select class="select" id="kw-comp" aria-label="연결할 역량">${COMPETENCIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>
+        <button class="btn" id="kw-add" type="button">추가</button></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>연결 역량</h2><span class="note">이 경험으로 증명할 수 있는 역량을 고르세요</span></div>
+      <div class="chips" id="comps">${COMPETENCIES.map(c => `<button class="chip" type="button" data-c="${c.id}" aria-pressed="${e.competencies.includes(c.id)}" title="${c.desc}">${c.name}</button>`).join('')}</div>
+    </div>`;
+  const fields = ['title', 'type', 'period', 'role', ...STAR.map(s => s[0])];
+  let t;
+  fields.forEach(f => $('#f-' + f).addEventListener('input', ev => {
+    e[f] = ev.target.value; e.updatedAt = new Date().toISOString(); delete e.example;
+    if (f === 'title') $('#ttl').textContent = e.title || '새 경험';
+    $('#save-state').textContent = '저장 중…';
+    clearTimeout(t); t = setTimeout(() => { persist(); paintSugg(); }, 400);
+  }));
+  $('#del').onclick = () => {
+    const b = $('#del');
+    if (b.dataset.armed) { P.experiences = P.experiences.filter(x => x.id !== e.id); cur = null; persist('경험을 삭제했습니다'); location.hash = ''; renderMap(); return; }
+    b.dataset.armed = '1'; b.textContent = '한 번 더 누르면 삭제'; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = '삭제'; } }, 3000);
+  };
+  $('#comps').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-c]'); if (!b) return;
+    const c = b.dataset.c; const on = e.competencies.includes(c);
+    e.competencies = on ? e.competencies.filter(x => x !== c) : [...e.competencies, c];
+    b.setAttribute('aria-pressed', !on); e.updatedAt = new Date().toISOString(); persist();
+  });
+  const addKw = (kw, comp) => {
+    kw = kw.trim(); if (!kw || e.keywords.some(k => k.kw === kw)) return;
+    e.keywords.push({ kw, comp });
+    if (comp && !e.competencies.includes(comp)) { e.competencies.push(comp); const b = document.querySelector(`#comps [data-c="${comp}"]`); b && b.setAttribute('aria-pressed', 'true'); }
+    e.updatedAt = new Date().toISOString(); persist(); paintSugg(); paintMine();
+  };
+  $('#kw-add').onclick = () => { addKw($('#kw-new').value, $('#kw-comp').value); $('#kw-new').value = ''; };
+  $('#kw-new').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); $('#kw-add').click(); } });
+  const onChipAdd = ev => { const b = ev.target.closest('[data-kw]'); if (!b) return; addKw(b.dataset.kw, b.dataset.comp); b.remove(); };
+  $('#sugg').addEventListener('click', onChipAdd);
+  $('#ai-sugg').addEventListener('click', onChipAdd);
+  $('#mine').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-rm]'); if (!b) return;
+    e.keywords = e.keywords.filter(k => k.kw !== b.dataset.rm); e.updatedAt = new Date().toISOString(); persist(); paintMine(); paintSugg();
+  });
+  function paintSugg() {
+    const s = suggestKeywords(expText(e), e.keywords);
+    $('#sugg').innerHTML = s.length ? s.map(k => `<button class="chip sugg" type="button" data-kw="${esc(k.kw)}" data-comp="${k.comp}" title="근거: '${esc(k.hint)}'">+ ${esc(k.kw)} <small>${compName(k.comp)}</small></button>`).join('')
+      : '<span class="note">상황·행동·결과를 적으면 키워드를 제안합니다.</span>';
+  }
+  function paintMine() {
+    $('#mine').innerHTML = e.keywords.length ? e.keywords.map(k => `<span class="chip on">${esc(k.kw)} <small>${compName(k.comp)}</small><button class="x" type="button" data-rm="${esc(k.kw)}" aria-label="${esc(k.kw)} 삭제">×</button></span>`).join('')
+      : '<span class="note">아직 없습니다. 제안 키워드를 누르거나 직접 입력하세요.</span>';
+  }
+  paintSugg(); paintMine();
+  $('#ai-kw').onclick = async () => {
+    const st = $('#ai-kw-st');
+    if (!expText(e).trim()) { st.textContent = '먼저 경험 내용을 적어 주세요.'; return; }
+    if (!hasKey()) { st.textContent = '상단 "AI 설정"에서 API 키를 입력하면 쓸 수 있습니다.'; return; }
+    $('#ai-kw').disabled = true; st.textContent = 'AI가 경험을 읽고 있습니다…';
+    try {
+      const r = await json({
+        system: '당신은 대학생·취업준비생의 경험을 분석해 자기소개서용 키워드를 뽑는 커리어 코치입니다. 경험에 실제로 적힌 사실만 근거로 삼고, 없는 내용을 지어내지 마세요. 키워드는 2~8자 정도의 짧은 한국어 명사구로 씁니다.',
+        prompt: `다음 경험에서 자기소개서에 쓸 만한 키워드를 최대 6개 제안하세요. 이미 등록된 키워드(${e.keywords.map(k => k.kw).join(', ') || '없음'})는 빼세요. 각 키워드는 아래 역량 id 중 가장 가까운 하나에 연결하고, 경험 속 근거 문장을 짧게 인용하세요.\n역량 id: ${COMPETENCIES.map(c => `${c.id}(${c.name})`).join(', ')}\n\n<experience>\n${expSummary(e)}\n</experience>`,
+        schema: { type: 'object', additionalProperties: false, required: ['keywords'], properties: { keywords: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['kw', 'comp', 'reason'], properties: { kw: { type: 'string' }, comp: { type: 'string', enum: COMPETENCIES.map(c => c.id) }, reason: { type: 'string' } } } } } },
+      });
+      const list = (r.keywords || []).filter(k => !e.keywords.some(x => x.kw === k.kw));
+      $('#ai-sugg-wrap').hidden = false;
+      $('#ai-sugg').innerHTML = list.length ? list.map(k => `<button class="chip sugg" type="button" data-kw="${esc(k.kw)}" data-comp="${esc(k.comp)}" title="${esc(k.reason)}">+ ${esc(k.kw)} <small>${compName(k.comp)}</small></button>`).join('') : '<span class="note">추가로 제안할 키워드가 없습니다.</span>';
+      st.textContent = list.length ? '키워드에 마우스를 올리면 근거가 보입니다.' : '';
+    } catch (err) { st.innerHTML = `<span class="ai-err">${esc(errorMessage(err))}</span>`; }
+    finally { $('#ai-kw').disabled = false; }
+  };
+  renderList();
+}
+
+function route() {
+  const id = location.hash.slice(1);
+  cur = P.experiences.some(e => e.id === id) ? id : null;
+  if (cur) renderEditor(); else { renderMap(); renderList(); }
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+$('#to-map').onclick = ev => { ev.preventDefault(); location.hash = ''; route(); };
+$('#new-exp').onclick = () => {
+  const e = { id: uid(), title: '', type: EXP_TYPES[0], period: '', role: '', situation: '', task: '', action: '', result: '', keywords: [], competencies: [], updatedAt: new Date().toISOString() };
+  P.experiences.push(e); save(P); location.hash = e.id;
+  setTimeout(() => { const f = $('#f-title'); f && f.focus(); }, 0);
+};
+$('#backup').onclick = () => openBackup(P, np => { P = np; route(); });
+window.addEventListener('storage', ev => { if (ev.key === 'ecm-profile-v1') { P = load(); route(); } });
+
+route();
+</script>
+</body>
+</html>

@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>자기소개서 · ESG 커리어 맵</title>
+<meta name="description" content="자기소개서를 직접 쓰고 강점 키워드, 빠른 점검, AI 코칭·제안·점검·피드백을 받습니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/base.css">
+<style>
+.cl{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:20px;align-items:start;max-width:1240px;margin:0 auto}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--hdr,60px) + 16px);display:grid;gap:14px;max-height:calc(100vh - var(--hdr,60px) - 32px);overflow:auto;min-width:0}
+.body{min-height:420px;font-size:15.5px;line-height:1.8}
+.meter{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.bar{flex:1;min-width:120px;height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.bar i.over{background:var(--bad)}
+.bar i.low{background:var(--job)}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13.5px}
+.checks li{display:grid;grid-template-columns:18px 1fr;gap:6px;align-items:start}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:6px}
+.dot.ok{background:var(--good)} .dot.warn{background:var(--job)} .dot.bad{background:var(--bad)}
+.kwrow{display:flex;flex-wrap:wrap;gap:6px}
+.kwc{display:inline-flex;gap:4px;align-items:center;border-radius:999px;padding:2px 10px;font-size:13px;border:1px solid var(--line);cursor:pointer;background:var(--surface)}
+.kwc.used{border-color:var(--good);background:var(--good-soft);color:var(--good)}
+.kwc small{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.cbar{display:grid;grid-template-columns:96px 1fr 22px;gap:8px;align-items:center;font-size:12.5px}
+.cbar .bar{height:8px}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tools .btn{justify-content:center}
+.tools .btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.out{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:8px}
+.issue{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:4px;font-size:13.5px}
+.issue q{background:var(--bad-soft);border-radius:4px;padding:0 3px}
+.issue .fix{background:var(--good-soft);border-radius:4px;padding:0 3px}
+.score{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:13.5px;padding:6px 0;border-bottom:1px solid var(--line)}
+.score b{font-family:var(--mono)}
+.score span{grid-column:1/-1;color:var(--muted);font-size:12.5px}
+.big{font-size:30px;font-family:var(--mono);font-weight:500}
+.exps{display:flex;flex-wrap:wrap;gap:6px}
+details summary{cursor:pointer;font-weight:600;font-size:14px}
+.csr{margin:8px 0 0;padding-left:18px;font-size:13.5px;display:grid;gap:4px}
+@media (max-width:1100px){.cl{grid-template-columns:1fr}.rail{position:static;max-height:none;overflow:visible}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <a class="brand" href="./">ESG 커리어 맵 <small>사회공헌백서 2022–2025 기반</small></a>
+  <nav class="nav" aria-label="주 메뉴">
+    <a href="./">ESG 기업</a>
+    <a href="experiences.html">경험 키워드</a>
+    <a href="coverletter.html" aria-current="page">자기소개서</a>
+  </nav>
+  <div class="top-tools">
+    <button class="btn ghost" id="backup" type="button">백업·복원</button>
+    <button class="btn" id="ai-set" type="button">AI 설정</button>
+  </div>
+</div></header>
+
+<div class="app">
+  <aside class="side" aria-label="자기소개서 목록">
+    <div class="side-head">
+      <div class="row" style="justify-content:space-between"><h2>내 자기소개서 <span class="num" id="cl-n" style="color:var(--muted);font-weight:400"></span></h2>
+        <button class="btn primary" id="new-cl" type="button">+ 새 문항</button></div>
+    </div>
+    <ul class="list" id="cl-list"></ul>
+  </aside>
+  <main class="main"><div id="page"></div></main>
+</div>
+<datalist id="orgs"></datalist>
+
+<script type="module">
+import { COMPETENCIES, compName, load, save, uid, strengths, expSummary, toast, esc, setHeaderHeight, openBackup, ensureExamples, keywordUsed } from './assets/store.js';
+import { bindSettingsButton, hasKey, streamText, json, errorMessage, md } from './assets/ai.js';
+
+let P = load();
+let cur = null, tool = null, ORG = null;
+const $ = s => document.querySelector(s);
+setHeaderHeight();
+bindSettingsButton($('#ai-set'));
+
+// 사회공헌 데이터: 기업명 자동완성, 기업별 프로그램 참고, 다른 기업명 오기 점검에 사용
+fetch('programs.json').then(r => r.json()).then(d => {
+  ORG = new Map();
+  for (const p of d) { const o = ORG.get(p.org) || []; o.push(p); ORG.set(p.org, o); }
+  $('#orgs').innerHTML = [...ORG.keys()].sort((a, b) => a.localeCompare(b, 'ko')).map(n => `<option value="${esc(n)}"></option>`).join('');
+  if (cur) { paintCSR(); paintChecks(); }
+}).catch(() => { ORG = null; });
+
+const SYSTEM = `당신은 한국 기업·공공기관 채용의 자기소개서를 지도하는 커리어 코치입니다.
+원칙:
+- 지원자가 제공한 경험과 사실만 사용합니다. 경험, 수치, 직함을 지어내지 않습니다. 필요한 정보가 없으면 [보완 필요: 무엇]으로 표시합니다.
+- 지원자의 말투와 표현을 최대한 살리고, 대신 써 주기보다 스스로 고칠 수 있게 돕습니다.
+- 기업의 사회공헌·ESG 정보는 제공된 자료에 있는 내용만 인용합니다.
+- 한국어로, 짧고 분명한 문장으로 답합니다.`;
+
+function letter() { return P.letters.find(l => l.id === cur); }
+function linkedExps(l) { return P.experiences.filter(e => (l.expIds || []).includes(e.id)); }
+function context(l) {
+  const csr = (ORG && ORG.get(l.company)) || [];
+  const latest = csr.length ? Math.max(...csr.map(p => p.edition)) : 0;
+  const s = strengths(P);
+  const exps = linkedExps(l).length ? linkedExps(l) : P.experiences;
+  return `<company>${l.company || '(미입력)'}</company>
+<role>${l.role || '(미입력)'}</role>
+<question>${l.question || '(미입력)'}</question>
+<char_limit>${l.limit || '제한 없음'}자 (공백 포함)</char_limit>
+<strength_keywords>${s.keywords.map(k => `${k.kw}(${k.count})`).join(', ') || '없음'}</strength_keywords>
+<experiences note="${linkedExps(l).length ? '지원자가 이 문항에 쓰겠다고 고른 경험' : '지원자가 등록한 전체 경험'}">
+${exps.map((e, i) => `[경험 ${i + 1}]\n${expSummary(e)}`).join('\n\n') || '등록된 경험 없음'}
+</experiences>
+<company_csr source="사회공헌백서 ${latest || ''}년판 부록">
+${csr.filter(p => p.edition === latest).map(p => `- ${p.program}: ${p.description.slice(0, 160)}`).join('\n') || '자료 없음'}
+</company_csr>
+<draft chars="${(l.body || '').length}">
+${l.body || '(아직 작성하지 않음)'}
+</draft>`;
+}
+
+ensureExamples(P);
+function seedExample() {
+  if (P.letters.length || P.seededLetter) return;
+  P.seededLetter = true;
+  P.letters.push({ id: uid(), example: true, company: 'SK텔레콤', role: 'ESG 사업 기획', question: '지원 동기와 입사 후 이루고 싶은 목표를 작성해 주십시오.', limit: 800,
+    body: '', expIds: P.experiences.filter(e => e.example).map(e => e.id), updatedAt: new Date().toISOString() });
+  save(P);
+}
+seedExample();
+
+function persist() { const ok = save(P); const st = $('#save-state'); if (st) st.textContent = ok ? '이 브라우저에 저장됨' : '저장 실패'; renderList(); }
+
+function renderList() {
+  $('#cl-n').textContent = P.letters.length;
+  const items = [...P.letters].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  $('#cl-list').innerHTML = items.length ? items.map(l => `<li><a class="item" href="#${l.id}" aria-current="${cur === l.id}">
+    <span class="nm">${esc(l.company || '기업 미입력')}${l.role ? ' · ' + esc(l.role) : ''}</span>
+    <span class="sub">${esc(l.question || '문항 미입력')}</span>
+    <span class="sub num">${(l.body || '').length}${l.limit ? ' / ' + l.limit : ''}자</span></a></li>`).join('')
+    : '<li class="empty">"+ 새 문항"으로 자기소개서 문항을 추가하세요.</li>';
+}
+
+function renderEmpty() {
+  $('#page').innerHTML = `<div class="page"><div><div class="eyebrow">자기소개서</div><h1>문항을 선택하거나 새로 추가하세요</h1>
+    <p class="lead">왼쪽 목록에서 문항을 고르면 작성 화면이 열립니다. 경험 키워드 페이지에 등록한 경험이 강점 키워드로 정리되어 옆에 표시됩니다.</p></div></div>`;
+}
+
+function render() {
+  const l = letter();
+  if (!l) { renderEmpty(); renderList(); return; }
+  l.expIds ||= [];
+  $('#page').innerHTML = `<div class="cl">
+  <section class="page" style="max-width:none;margin:0" aria-label="작성">
+    <div class="row" style="justify-content:space-between;align-items:flex-end">
+      <div><div class="eyebrow">자기소개서${l.example ? ' · 예시 문항' : ''}</div><h1 id="ttl">${esc(l.company || '새 자기소개서')}</h1></div>
+      <div class="row"><span class="note" id="save-state">이 브라우저에 저장됨</span><button class="btn danger" id="del" type="button">삭제</button></div>
+    </div>
+    <div class="panel">
+      <div class="grid2">
+        <label class="field"><span>지원 기업·기관</span><input class="input" id="f-company" list="orgs" value="${esc(l.company)}" placeholder="예: 삼성전자"></label>
+        <label class="field"><span>지원 직무</span><input class="input" id="f-role" value="${esc(l.role)}" placeholder="예: ESG 사업 기획"></label>
+      </div>
+      <label class="field"><span>문항</span><textarea class="textarea" id="f-question" rows="2" style="min-height:0">${esc(l.question)}</textarea></label>
+      <div class="row">
+        <label class="field" style="width:160px"><span>글자 수 제한 (공백 포함)</span><input class="input num" id="f-limit" type="number" min="0" step="50" value="${l.limit || ''}" placeholder="예: 1000"></label>
+      </div>
+      <div class="field"><span>이 문항에 쓸 경험 <small>AI가 이 경험을 우선 참고합니다</small></span>
+        <div class="exps" id="exps">${P.experiences.length ? P.experiences.map(e => `<button class="chip" type="button" data-e="${e.id}" aria-pressed="${l.expIds.includes(e.id)}">${esc(e.title || '제목 없음')}</button>`).join('') : '<span class="note">아직 경험이 없습니다. <a href="experiences.html">경험 키워드</a>에서 먼저 등록하세요.</span>'}</div></div>
+      <div id="csr"></div>
+    </div>
+    <div class="panel">
+      <label class="field"><span>본문</span><textarea class="textarea body" id="f-body" placeholder="직접 작성하세요. 막히면 오른쪽의 '작성 코칭'이나 '작성 제안'을 눌러 보세요.">${esc(l.body)}</textarea></label>
+      <div class="meter" id="meter"></div>
+    </div>
+  </section>
+  <aside class="rail" aria-label="강점 키워드와 작성 도구">
+    <div class="panel" id="strength"></div>
+    <div class="panel"><div class="panel-head"><h2>빠른 점검</h2><span class="note">입력할 때마다 갱신</span></div><ul class="checks" id="checks"></ul></div>
+    <div class="panel">
+      <div class="panel-head"><h2>AI 작성 도구</h2><span class="note">Claude</span></div>
+      <div class="tools">
+        <button class="btn" type="button" data-tool="coach">작성 코칭</button>
+        <button class="btn" type="button" data-tool="suggest">작성 제안</button>
+        <button class="btn" type="button" data-tool="check">문장 점검</button>
+        <button class="btn" type="button" data-tool="feedback">종합 피드백</button>
+      </div>
+      <p class="note" id="ai-hint"></p>
+      <div class="out" id="out" hidden></div>
+    </div>
+  </aside></div>`;
+
+  const bind = (id, key, num) => $('#f-' + id).addEventListener('input', ev => {
+    l[key] = num ? (parseInt(ev.target.value, 10) || 0) : ev.target.value; l.updatedAt = new Date().toISOString(); delete l.example;
+    if (key === 'company') { $('#ttl').textContent = l.company || '새 자기소개서'; paintCSR(); }
+    $('#save-state').textContent = '저장 중…'; clearTimeout(bind.t); bind.t = setTimeout(persist, 400);
+    paintMeter(); paintChecks(); paintStrength();
+  });
+  bind('company', 'company'); bind('role', 'role'); bind('question', 'question'); bind('limit', 'limit', true); bind('body', 'body');
+  $('#exps').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-e]'); if (!b) return;
+    const on = l.expIds.includes(b.dataset.e);
+    l.expIds = on ? l.expIds.filter(x => x !== b.dataset.e) : [...l.expIds, b.dataset.e];
+    b.setAttribute('aria-pressed', !on); persist(); paintStrength();
+  });
+  $('#del').onclick = () => {
+    const b = $('#del');
+    if (b.dataset.armed) { P.letters = P.letters.filter(x => x.id !== l.id); cur = null; save(P); location.hash = ''; toast('문항을 삭제했습니다'); return; }
+    b.dataset.armed = '1'; b.textContent = '한 번 더 누르면 삭제'; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = '삭제'; } }, 3000);
+  };
+  document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => runTool(b.dataset.tool));
+  $('#ai-hint').textContent = hasKey() ? '버튼을 누르면 문항·본문·선택한 경험이 Claude API로 전송됩니다.' : '상단 "AI 설정"에서 Claude API 키를 입력하면 쓸 수 있습니다.';
+  paintMeter(); paintChecks(); paintStrength(); paintCSR(); renderList();
+}
+
+function paintMeter() {
+  const l = letter(); const b = l.body || ''; const n = b.length, ns = b.replace(/\s/g, '').length;
+  const lim = l.limit || 0, pct = lim ? Math.min(100, n / lim * 100) : 0;
+  const cls = lim && n > lim ? 'over' : lim && n < lim * .7 ? 'low' : '';
+  $('#meter').innerHTML = `<span class="num">${n.toLocaleString()}${lim ? ' / ' + lim.toLocaleString() : ''}자</span>
+    ${lim ? `<span class="bar" aria-hidden="true"><i class="${cls}" style="width:${pct}%"></i></span>` : ''}
+    <span class="num">공백 제외 ${ns.toLocaleString()}자</span>`;
+}
+
+function paintCSR() {
+  const l = letter(); const el = $('#csr'); if (!el || !l) return;
+  const csr = ORG && ORG.get(l.company);
+  if (!csr) { el.innerHTML = l.company && ORG ? '<p class="note">사회공헌백서에 실린 기업·기관이 아니어서 참고 자료가 없습니다.</p>' : ''; return; }
+  const latest = Math.max(...csr.map(p => p.edition));
+  el.innerHTML = `<details><summary>${esc(l.company)}의 대표 사회공헌 프로그램 (${latest}년판)</summary>
+    <ul class="csr">${csr.filter(p => p.edition === latest).map(p => `<li><b>${esc(p.program)}</b> · ${esc(p.field_std)}${p.start_year ? ', ' + p.start_year + '년~' : ''}</li>`).join('')}</ul>
+    <p class="note" style="margin-top:6px">지원 동기나 입사 후 포부에 연결할 수 있습니다. <a href="./#c${[...ORG.keys()].sort((a, b) => a.localeCompare(b, 'ko')).indexOf(l.company) + 1}">ESG 기업에서 자세히 보기</a></p></details>`;
+}
+
+function paintStrength() {
+  const l = letter(); const s = strengths(P);
+  const sel = new Set(l.expIds || []);
+  const used = k => keywordUsed(k.kw, l.body || '');
+  const maxC = Math.max(1, ...s.competencies.map(c => c.count));
+  $('#strength').innerHTML = `<div class="panel-head"><h2>강점 키워드</h2><a class="note" href="experiences.html">경험 관리</a></div>
+    ${s.keywords.length ? `<div class="kwrow">${s.keywords.map(k => `<span class="kwc ${used(k) ? 'used' : ''}" title="${used(k) ? '본문에 반영됨' : '아직 본문에 없음'}${k.exps.some(id => sel.has(id)) ? ' · 선택한 경험의 키워드' : ''}">${used(k) ? '✓ ' : ''}${esc(k.kw)} <small>${k.count}</small></span>`).join('')}</div>
+      <p class="note">초록색은 본문에 이미 드러난 키워드입니다. 회색 키워드 중 문항에 맞는 것을 골라 녹여 보세요.</p>
+      <h3 style="font-size:13px;color:var(--muted)">역량별 근거 경험 수</h3>
+      <div style="display:grid;gap:5px">${s.competencies.map(c => `<div class="cbar"><span>${esc(c.name)}</span><span class="bar"><i style="width:${c.count / maxC * 100}%"></i></span><span class="num">${c.count}</span></div>`).join('')}</div>`
+    : '<p class="note">경험 키워드 페이지에서 경험과 키워드를 등록하면 여기에 강점이 정리됩니다.</p>'}`;
+}
+
+const CLICHE = [/열심히/g, /최선을 다/g, /것 같습니다/g, /많은 것을 배/g, /소중한 경험/g, /어릴 (때|적)부터/g, /항상 노력/g, /성실함을 바탕으로/g];
+function paintChecks() {
+  const l = letter(); const b = l.body || ''; const out = [];
+  const lim = l.limit || 0, n = b.length;
+  if (!b.trim()) { $('#checks').innerHTML = '<li><span class="dot warn"></span><span>본문을 쓰기 시작하면 점검 결과가 나타납니다.</span></li>'; return; }
+  if (lim) out.push(n > lim ? ['bad', `글자 수를 ${n - lim}자 넘었습니다.`] : n < lim * .7 ? ['warn', `분량이 제한의 ${Math.round(n / lim * 100)}%입니다. 90% 이상 채우는 것이 좋습니다.`] : ['ok', `분량 적정 (${Math.round(n / lim * 100)}%)`]);
+  const sents = b.split(/(?<=[.!?。])\s+|\n+/).map(s => s.trim()).filter(Boolean);
+  const first = sents[0] || '';
+  out.push(first.length > 90 ? ['warn', `첫 문장이 ${first.length}자로 깁니다. 결론을 먼저 짧게 말해 보세요.`] : ['ok', '첫 문장 길이 적정']);
+  const long = sents.filter(s => s.length > 100).length;
+  out.push(long ? ['warn', `100자가 넘는 긴 문장이 ${long}개 있습니다. 둘로 나눠 보세요.`] : ['ok', '긴 문장 없음']);
+  const cl = CLICHE.reduce((a, re) => a + (b.match(re) || []).length, 0);
+  out.push(cl ? ['warn', `"열심히", "최선을 다해" 같은 상투적 표현이 ${cl}번 나옵니다. 행동과 결과로 바꿔 보세요.`] : ['ok', '상투적 표현 없음']);
+  out.push(/\d/.test(b) ? ['ok', '숫자로 된 근거가 있습니다'] : ['warn', '숫자로 된 근거(기간, 인원, 성과)가 없습니다.']);
+  if (l.company) out.push(b.includes(l.company) ? ['ok', `지원 기업명(${l.company})이 들어 있습니다`] : ['warn', `지원 기업명(${l.company})이 본문에 없습니다.`]);
+  if (ORG) {
+    const others = [...ORG.keys()].filter(o => o.length >= 2 && o !== l.company && !(l.company || '').includes(o) && b.includes(o) && !/^[A-Z]{1,2}$/.test(o));
+    if (others.length) out.push(['bad', `다른 기업명이 들어 있습니다: ${others.slice(0, 3).join(', ')}. 다른 지원서를 옮겨 쓴 것이 아닌지 확인하세요.`]);
+  }
+  const words = (b.match(/[가-힣A-Za-z]{2,}/g) || []).filter(w => !/^(저는|제가|있습니다|했습니다|합니다|그리고|하지만|통해|위해|대한|이러한|있는|하는|되었습니다)$/.test(w));
+  const freq = {}; words.forEach(w => freq[w] = (freq[w] || 0) + 1);
+  const rep = Object.entries(freq).filter(([, c]) => c >= 5).sort((a, c) => c[1] - a[1]).slice(0, 3);
+  if (rep.length) out.push(['warn', `자주 반복되는 단어: ${rep.map(([w, c]) => `${w}(${c})`).join(', ')}`]);
+  $('#checks').innerHTML = out.map(([s, t]) => `<li><span class="dot ${s}" aria-label="${s === 'ok' ? '통과' : s === 'bad' ? '문제' : '주의'}"></span><span>${esc(t)}</span></li>`).join('');
+}
+
+async function runTool(name) {
+  const l = letter(); const out = $('#out');
+  document.querySelectorAll('[data-tool]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tool === name));
+  out.hidden = false;
+  if (!hasKey()) { out.innerHTML = `<p class="ai-err">${esc(errorMessage(new Error('NO_KEY')))}</p>`; return; }
+  if (!l.question) { out.innerHTML = '<p class="ai-err">먼저 문항을 입력하세요.</p>'; return; }
+  if ((name === 'check' || name === 'feedback') && (l.body || '').trim().length < 50) { out.innerHTML = '<p class="ai-err">점검과 피드백은 본문을 50자 이상 쓴 뒤에 쓸 수 있습니다.</p>'; return; }
+  const btns = document.querySelectorAll('[data-tool]'); btns.forEach(b => b.disabled = true);
+  const label = { coach: '작성 코칭', suggest: '작성 제안', check: '문장 점검', feedback: '종합 피드백' }[name];
+  out.innerHTML = `<div class="ai-status">${label}을 준비하고 있습니다…</div><div class="ai-out" id="ai-text"></div>`;
+  const live = $('#ai-text');
+  try {
+    if (name === 'coach') {
+      const r = await streamText({ system: SYSTEM, effort: 'high', onText: t => live.innerHTML = md(t), prompt: `${context(l)}
+
+위 문항에 대한 작성 코칭을 해 주세요. 아래 순서로, 각 항목을 짧게 씁니다.
+## 문항 의도
+## 추천 경험
+제공된 경험 중 이 문항에 가장 맞는 1~2개와 이유
+## 추천 구성
+문단별 개요와 글자 수 배분 (첫 문장에 결론)
+## 강조할 강점 키워드
+## 기업 사회공헌·ESG와 연결할 점
+company_csr에 있는 내용만 사용. 자료가 없으면 생략
+## 지금 할 일
+초안이 있으면 가장 먼저 고칠 한 가지, 없으면 첫 문장을 쓰는 방법` });
+      done(out, r.truncated);
+    } else if (name === 'suggest') {
+      const has = (l.body || '').trim().length > 0;
+      const r = await streamText({ system: SYSTEM, effort: 'high', onText: t => live.innerHTML = md(t), prompt: `${context(l)}
+
+${has ? '초안의 흐름과 말투를 유지하면서 다듬은 버전을 제안하세요. 지원자가 쓴 문장을 최대한 살리고, 약한 부분만 고칩니다.' : '선택한 경험을 바탕으로 이 문항의 초안을 제안하세요. 지원자가 고쳐 쓸 출발점입니다.'}
+글자 수 제한(${l.limit || '없음'})을 넘기지 마세요. 형식:
+## 제안 문장
+(본문만)
+## 바꾼 점
+(3~5개 항목)` });
+      done(out, r.truncated);
+      const m = r.text.split(/##\s*바꾼 점/)[0].replace(/##\s*제안 문장\s*/, '').trim();
+      if (m) {
+        const bar = document.createElement('div'); bar.className = 'row';
+        bar.innerHTML = '<button class="btn" type="button" id="cp">제안 문장 복사</button><button class="btn" type="button" id="ap">본문 끝에 붙이기</button>';
+        out.appendChild(bar);
+        $('#cp').onclick = () => navigator.clipboard.writeText(m).then(() => toast('복사했습니다'), () => toast('복사하지 못했습니다. 직접 선택해 복사하세요'));
+        $('#ap').onclick = () => { const f = $('#f-body'); f.value = (f.value ? f.value + '\n\n' : '') + m; f.dispatchEvent(new Event('input')); toast('본문 끝에 붙였습니다. 내 말투로 다듬어 주세요'); };
+      }
+    } else if (name === 'check') {
+      out.querySelector('.ai-status').textContent = '문장을 점검하고 있습니다…';
+      const r = await json({ system: SYSTEM, effort: 'medium', prompt: `${context(l)}
+
+draft의 문장을 점검하세요. 맞춤법, 문법, 어색한 표현, 중복, 모호한 표현, 논리 흐름 문제를 찾습니다. 최대 12개. quote는 draft에 있는 그대로의 구절이어야 합니다. 문제가 없으면 빈 배열을 돌려주세요.`,
+        schema: { type: 'object', additionalProperties: false, required: ['issues', 'summary'], properties: {
+          summary: { type: 'string' },
+          issues: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['category', 'quote', 'suggestion', 'reason'], properties: {
+            category: { type: 'string', enum: ['맞춤법', '문법', '어색한 표현', '중복', '모호함', '논리'] }, quote: { type: 'string' }, suggestion: { type: 'string' }, reason: { type: 'string' } } } } } } });
+      out.innerHTML = `<p class="ai-out">${esc(r.summary)}</p>` + (r.issues.length ? r.issues.map((i, k) => `<div class="issue"><span class="tag">${esc(i.category)}</span>
+        <span><q>${esc(i.quote)}</q> → <span class="fix">${esc(i.suggestion)}</span></span><span class="note">${esc(i.reason)}</span>
+        <div><button class="btn" type="button" data-fix="${k}">적용</button></div></div>`).join('') : '<p class="note">고칠 문장을 찾지 못했습니다.</p>');
+      out.querySelectorAll('[data-fix]').forEach(b => b.onclick = () => {
+        const i = r.issues[+b.dataset.fix]; const f = $('#f-body');
+        if (!f.value.includes(i.quote)) { toast('본문에서 해당 구절을 찾지 못했습니다'); return; }
+        f.value = f.value.replace(i.quote, i.suggestion); f.dispatchEvent(new Event('input')); b.textContent = '적용됨'; b.disabled = true;
+      });
+    } else if (name === 'feedback') {
+      out.querySelector('.ai-status').textContent = '종합 피드백을 작성하고 있습니다…';
+      const crit = ['문항 적합성', '구체성·근거', '구성·두괄식', '직무·기업 연결', '진정성·차별성', '문장력'];
+      const r = await json({ system: SYSTEM, effort: 'high', prompt: `${context(l)}
+
+채용 담당자의 눈으로 draft를 평가하세요. 각 기준을 1~5점 정수로 매기고 근거를 한두 문장으로 씁니다. 기준: ${crit.join(', ')}. 잘한 점 2~3개, 개선할 점 3개(구체적인 방법 포함), 다음에 할 한 가지를 씁니다.`,
+        schema: { type: 'object', additionalProperties: false, required: ['summary', 'scores', 'strengths', 'improvements', 'next_step'], properties: {
+          summary: { type: 'string' },
+          scores: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['criterion', 'score', 'comment'], properties: { criterion: { type: 'string', enum: crit }, score: { type: 'integer' }, comment: { type: 'string' } } } },
+          strengths: { type: 'array', items: { type: 'string' } },
+          improvements: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['point', 'how'], properties: { point: { type: 'string' }, how: { type: 'string' } } } },
+          next_step: { type: 'string' } } } });
+      const sc = r.scores.map(s => Math.max(1, Math.min(5, s.score)));
+      const avg = sc.length ? (sc.reduce((a, b) => a + b, 0) / sc.length) : 0;
+      out.innerHTML = `<div class="row" style="align-items:baseline"><span class="big">${avg.toFixed(1)}</span><span class="note">/ 5 · 6개 기준 평균</span></div>
+        <p class="ai-out" style="margin:0">${esc(r.summary)}</p>
+        <div>${r.scores.map((s, i) => `<div class="score"><strong>${esc(s.criterion)}</strong><b>${sc[i]}/5</b><span>${esc(s.comment)}</span></div>`).join('')}</div>
+        <div class="ai-out"><h4>잘한 점</h4><ul>${r.strengths.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+        <h4>개선할 점</h4><ol>${r.improvements.map(s => `<li><strong>${esc(s.point)}</strong> ${esc(s.how)}</li>`).join('')}</ol>
+        <h4>다음에 할 일</h4><p>${esc(r.next_step)}</p></div>`;
+    }
+  } catch (err) {
+    out.innerHTML = `<p class="ai-err">${esc(errorMessage(err))}</p>`;
+  } finally { btns.forEach(b => b.disabled = false); }
+}
+function done(out, truncated) {
+  const st = out.querySelector('.ai-status');
+  if (st) st.textContent = truncated ? '응답이 길어 중간에 끊겼습니다.' : 'AI 제안은 참고용입니다. 사실과 다른 내용이 없는지 꼭 확인하세요.';
+}
+
+function route() {
+  const id = location.hash.slice(1);
+  cur = P.letters.some(l => l.id === id) ? id : (P.letters[0] && !id ? P.letters[0].id : null);
+  render();
+}
+window.addEventListener('hashchange', route);
+$('#new-cl').onclick = () => {
+  const l = { id: uid(), company: '', role: '', question: '', limit: 1000, body: '', expIds: [], updatedAt: new Date().toISOString() };
+  P.letters.push(l); save(P); location.hash = l.id; setTimeout(() => { const f = $('#f-company'); f && f.focus(); }, 0);
+};
+$('#backup').onclick = () => openBackup(P, np => { P = np; route(); });
+window.addEventListener('storage', ev => { if (ev.key === 'ecm-profile-v1') { P = load(); route(); } });
+route();
+</script>
+</body>
+</html>
