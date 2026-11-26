@@ -216,6 +216,8 @@ function jobLinks(n){
     ['잡코리아',`https://www.jobkorea.co.kr/Search/?stext=${e(n)}`,'전체 공고'],
     ['원티드',`https://www.wanted.co.kr/search?query=${e(n)}`,'전체 공고'],
     ['링크드인',`https://www.linkedin.com/jobs/search/?keywords=${e(n+' ESG')}&location=${e('대한민국')}`,'ESG 키워드'],
+    ['자소설닷컴','https://jasoseol.com/','기업명 복사 후 이동',1],
+    ['슈퍼루키','https://www.superookie.com/','기업명 복사 후 이동',1],
     ['고용24',`https://www.work24.go.kr/`,'공공 채용정보']
   ];
 }
@@ -257,8 +259,9 @@ function renderDetail(){
   </section>
   <section class="jobs" aria-labelledby="h-job">
     <h2 id="h-job">채용공고</h2>
-    <p class="note">시제품 단계라 실시간 공고 대신 채용 사이트의 검색 결과로 연결합니다. 사람인·고용24 오픈API를 연동하면 이 자리에 진행 중인 공고 목록(직무, 경력, 마감일)이 표시되고, ${ESGKW.join('·')} 관련 직무가 위에 강조됩니다.</p>
-    <div class="jobgrid">${jobLinks(o.name).map(([s,u,l])=>`<a class="joblink" href="${u}" target="_blank" rel="noopener">${s}<span>${l} ↗</span></a>`).join('')}</div>
+    <p class="note">시제품 단계라 실시간 공고 대신 채용 사이트로 연결합니다. 자소설닷컴·슈퍼루키는 누르면 기업명이 복사되니 사이트 검색창에 붙여 넣으세요. 사람인·고용24 오픈API를 연동하면 이 자리에 진행 중인 공고 목록(직무, 경력, 마감일)이 표시되고, ${ESGKW.join('·')} 관련 직무가 위에 강조됩니다.</p>
+    <div class="jobgrid">${jobLinks(o.name).map(([s,u,l,c])=>`<a class="joblink" href="${u}" target="_blank" rel="noopener"${c?` data-copy="${esc(o.name)}"`:''}>${s}<span>${l} ↗</span></a>`).join('')}</div>
+    <p class="note" id="copy-msg" role="status"></p>
   </section>
   <p class="foot">출처: 보건복지부·한국사회복지협의회 사회공헌센터 「사회공헌백서」 ${eds.slice().reverse().join('·')}년판 부록. 백서에 실린 대표 프로그램만 담았으며 기업의 전체 사회공헌 활동이 아닙니다. 사실과 다른 내용이 있을 수 있습니다.</p>`;
   main.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{state.ed=+b.dataset.ed;renderDetail()});
@@ -272,6 +275,9 @@ function route(){
   if(state.cur&&window.innerWidth<=760)window.scrollTo(0,0);
 }
 window.addEventListener('hashchange',route);
+document.addEventListener('click',e=>{const a=e.target.closest('[data-copy]');if(!a)return;const n=a.dataset.copy,m=document.getElementById('copy-msg');
+  const say=t=>{if(m)m.textContent=t};
+  try{navigator.clipboard.writeText(n).then(()=>say(`'${n}'을(를) 복사했습니다. 열린 사이트의 검색창에 붙여 넣으세요.`),()=>say(`검색창에 '${n}'을(를) 입력하세요.`))}catch(err){say(`검색창에 '${n}'을(를) 입력하세요.`)}});
 let t;
 ['qn','qk'].forEach(id=>{const el=$('#'+id),key=id==='qn'?'n':'k';
   el.addEventListener('input',()=>{document.querySelector(`.qclear[data-for="${id}"]`).hidden=!el.value;clearTimeout(t);t=setTimeout(()=>{state[key]=el.value;state.ed=null;renderList();renderDetail()},150)})});
