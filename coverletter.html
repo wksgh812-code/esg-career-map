@@ -74,7 +74,7 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 <datalist id="orgs"></datalist>
 
 <script type="module">
-import { COMPETENCIES, compName, load, save, uid, strengths, expSummary, toast, esc, setHeaderHeight, openBackup, ensureExamples, keywordUsed, dday, ddayLabel, statusName } from './assets/store.js';
+import { COMPETENCIES, compName, load, save, uid, strengths, expSummary, toast, esc, setHeaderHeight, openBackup, ensureExamples, keywordUsed, dday, ddayLabel, statusName, downloadFile } from './assets/store.js';
 import { bindSettingsButton, hasKey, streamText, json, errorMessage, md } from './assets/ai.js';
 
 let P = load();
@@ -179,8 +179,18 @@ function render() {
   <aside class="rail" aria-label="강점 키워드와 작성 도구">
     <div class="panel" id="strength"></div>
     <div class="panel"><div class="panel-head"><h2>빠른 점검</h2><span class="note">입력할 때마다 갱신</span></div><ul class="checks" id="checks"></ul></div>
+    <div class="panel" id="cc">
+      <div class="panel-head"><h2>내 Claude에서 코칭받기</h2><span class="note">구독 사용량 · API 요금 없음</span></div>
+      <p class="note" style="margin:0">문항, 본문, 선택한 경험, 강점 키워드를 정리해 claude.ai 새 대화로 엽니다. 이어서 대화하며 코칭받으세요.</p>
+      <div class="chips" id="cc-modes">${Object.entries(MODES).map(([k, m], i) => `<button class="chip" type="button" data-mode="${k}" aria-pressed="${i === 0}">${m.name}</button>`).join('')}</div>
+      <p class="note" id="cc-type" style="margin:0"></p>
+      <button class="btn primary" type="button" id="cc-open" style="justify-content:center">Claude에서 열기 ↗</button>
+      <p class="note" id="cc-st" role="status" style="margin:0"></p>
+      <details id="cc-details"><summary class="note" style="cursor:pointer">보낼 내용 보기</summary><textarea class="textarea" id="cc-preview" rows="8" readonly style="margin-top:6px;font-size:12.5px"></textarea></details>
+      <div class="row"><button class="btn" type="button" id="cc-back">다듬은 글 가져오기</button><button class="btn ghost" type="button" id="cc-proj">프로젝트용 자료 받기</button></div>
+    </div>
     <div class="panel">
-      <div class="panel-head"><h2>AI 작성 도구</h2><span class="note">Claude</span></div>
+      <div class="panel-head"><h2>AI 작성 도구</h2><span class="note">API 키 · 사용량만큼 요금</span></div>
       <div class="tools">
         <button class="btn" type="button" data-tool="coach">작성 코칭</button>
         <button class="btn" type="button" data-tool="suggest">작성 제안</button>
@@ -212,6 +222,15 @@ function render() {
   };
   document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => runTool(b.dataset.tool));
   $('#ai-hint').textContent = hasKey() ? '버튼을 누르면 문항·본문·선택한 경험이 Claude API로 전송됩니다.' : '상단 "AI 설정"에서 Claude API 키를 입력하면 쓸 수 있습니다.';
+  let ccMode = 'coach';
+  const paintType = () => { const t = qtypeOf(l.question); $('#cc-type').innerHTML = t ? `문항 유형: <b>${t.name}</b> · 권장 순서: ${esc(t.order)}` : '문항을 입력하면 유형을 알아보고 권장 답변 순서를 함께 보냅니다.'; $('#cc-preview').value = chatPrompt(l, ccMode); };
+  $('#cc-modes').addEventListener('click', ev => { const b = ev.target.closest('[data-mode]'); if (!b) return; ccMode = b.dataset.mode; document.querySelectorAll('#cc-modes [data-mode]').forEach(x => x.setAttribute('aria-pressed', x === b)); paintType(); });
+  $('#f-question').addEventListener('input', paintType);
+  $('#f-body').addEventListener('input', () => { $('#cc-preview').value = chatPrompt(l, ccMode); });
+  $('#cc-open').onclick = () => openInClaude(l, ccMode);
+  $('#cc-back').onclick = () => pasteBack(l);
+  $('#cc-proj').onclick = () => { downloadFile(`claude-project-${new Date().toISOString().slice(0, 10)}.md`, projectFile(), 'text/markdown;charset=utf-8'); toast('프로젝트용 자료를 받았습니다. claude.ai 프로젝트에 올리세요'); };
+  paintType();
   paintMeter(); paintChecks(); paintStrength(); paintCSR(); renderList();
 }
 
@@ -221,6 +240,121 @@ function postingLine(l) {
   const n = dday(p.deadline);
   return `<a class="note" href="calendar.html" style="text-decoration:none">연결된 공고: ${esc(p.title || p.company)} · <b style="color:${n != null && n >= 0 && n <= 3 ? 'var(--bad)' : 'var(--accent)'}">${ddayLabel(n)}</b> (${esc((p.deadline || '').replace('T', ' '))} 마감, ${statusName(p.status)})</a>`;
 }
+// ---------- 내 Claude에서 코칭받기 (claude.ai 구독으로 대화, API 요금 없음) ----------
+// 문항 유형과 답변 순서는 채용 가이드 요약(guide-practice.html)에서 정리한 내용
+const QTYPES = [
+  { name: '입사 후 포부', re: /입사\s*후|포부|비전|VISION|10년|5년\s*후|커리어\s*계획/i, order: '시점별 계획(1~3년, 5~10년) → 회사가 가려는 방향과 연결 → 지금 하고 있는 준비', avoid: '"열심히 하겠습니다"로 끝내기, 회사와 무관한 개인 계획' },
+  { name: '지원동기', re: /지원\s*(한|하게 된)?\s*(동기|이유)|선택한\s*이유|지원\s*동기|왜\s*당사/, order: '산업·직무를 고른 계기 → 회사를 고르는 내 기준 → 그 기준에 이 회사가 맞는 근거 → 준비해 온 경험', avoid: '"왜 이 산업인가"만 쓰고 "왜 이 회사인가"를 빠뜨리기' },
+  { name: '협업·소통·갈등', re: /협업|팀워크|갈등|소통|함께\s*일|동료/, order: '상황(공동 목표) → 관계(내 위치와 갈등 지점) → 내 행동(소통·조율) → 결과와 배운 점', avoid: '팀 성과를 내 성과처럼 쓰기, 갈등을 상대 탓으로 쓰기' },
+  { name: '창의·문제해결·개선', re: /개선|새로운\s*방식|창의|아이디어|문제를\s*해결|해결한\s*경험/, order: '기존 방식과 한계 → 새로 시도한 방식과 이유 → 개선 폭(수치) → 확인 방법', avoid: '거창한 사례만 찾다 못 쓰기, 제안에서 멈추기' },
+  { name: '도전·성취·실패 극복', re: /도전|실패|좌절|역경|목표를\s*(세|수립)|성취|극복/, order: '스스로 높인 목표와 기준 → 부딪힌 장애물 → 결과(실패도 가능) → 배운 점과 이후 적용', avoid: '시킨 일을 잘 해낸 이야기를 도전으로 쓰기, 문항의 기간 조건 무시하기' },
+  { name: '성격·장단점·자기소개', re: /장단점|장점|단점|성격|자신을\s*표현|자기\s*소개|해시태그|단어\s*\d/, order: '나를 나타내는 키워드 3개 → 키워드별 근거 경험 → 단점과 보완 노력 → 지원 분야 적합성', avoid: '구조 없이 쓰기, 단점을 장점처럼 포장하기' },
+  { name: '경력·프로젝트 서술', re: /프로젝트|경력|수행\s*경험|이수\s*과목|연구\s*경험/, order: '직무와 가까운 프로젝트 선택 → 기간·역할·목표 → 한 일과 결과(수치) → 직무 연결', avoid: '팀 활동만 나열하고 내 역할이 없기' },
+  { name: '직무역량', re: /역량|직무|전문성|적합|강점/, order: '직무가 요구하는 역량 정의 → 그 역량의 증거(전공·프로젝트·자격) → 쌓아 온 과정 → 입사 후 쓰임', avoid: '역량을 성실함 같은 성격으로 적기, 적합한 이유를 빠뜨리기' },
+];
+const qtypeOf = q => { let best = null, at = Infinity; for (const t of QTYPES) { const m = (q || '').match(t.re); if (m && m.index < at) { at = m.index; best = t; } } return best; }; // 문항에서 먼저 나오는 유형
+const MODES = {
+  coach: { name: '작성 코칭', ask: `이 문항을 코칭해 주세요. 대신 써 주지 말고, 제가 스스로 쓸 수 있게 이끌어 주세요.
+1. 문항이 실제로 묻는 것
+2. 제 경험 중 이 문항에 가장 맞는 것과 이유
+3. 문단별 개요와 글자 수 배분 (첫 문장에 결론)
+4. 지금 초안이 있다면 가장 먼저 고칠 점 한 가지
+5. 답을 쓰기 위해 제가 더 생각해 볼 질문 3개
+이후에는 대화로 하나씩 같이 다듬어 주세요.` },
+  edit: { name: '첨삭', ask: `제 초안을 첨삭해 주세요.
+- 제 말투와 표현을 최대한 살리고, 약한 부분만 고쳐 주세요.
+- 고친 전체 본문을 먼저 보여 주고, 그 아래에 바꾼 문장마다 이유를 적어 주세요.
+- 글자 수 제한을 넘기지 마세요.` },
+  interview: { name: '면접 예상 질문', ask: `이 자기소개서를 읽은 면접관이 물어볼 질문을 만들어 주세요.
+- 예상 질문 8~10개와 각 질문의 꼬리 질문 1개
+- 질문마다 답변에 꼭 넣어야 할 포인트
+마지막에 "모의 면접을 시작할까요?"라고 물어보고, 제가 원하면 한 질문씩 진행해 주세요.` },
+  outline: { name: '개요·첫 문장', ask: `아직 본문을 쓰기 전입니다. 아래 순서로 도와주세요.
+1. 문단별 개요 (문단마다 쓸 경험과 핵심 문장, 글자 수 배분)
+2. 첫 문장 후보 3개 (결론을 먼저 말하는 형태)
+3. 각 문단에 넣으면 좋은 숫자나 근거` },
+};
+const RULES = `원칙:
+- 제가 제공한 경험과 사실만 사용하세요. 경험, 수치, 직함을 지어내지 마세요. 정보가 부족하면 [보완 필요: 무엇]으로 표시하고 저에게 물어봐 주세요.
+- 기업의 사회공헌·ESG 내용은 아래 자료에 있는 것만 인용하세요.
+- 한국어로, 짧고 분명하게 답해 주세요.`;
+
+function chatPrompt(l, mode) {
+  const m = MODES[mode], t = qtypeOf(l.question);
+  const exps = linkedExps(l).length ? linkedExps(l) : P.experiences;
+  const s = strengths(P);
+  const csr = (ORG && ORG.get(l.company)) || [];
+  const latest = csr.length ? Math.max(...csr.map(p => p.edition)) : 0;
+  const posting = (P.postings || []).find(x => x.id === l.postingId);
+  return [
+    `저는 취업을 준비하고 있습니다. 자기소개서 ${m.name}을 부탁드립니다.`, '', m.ask, '', RULES, '',
+    `## 지원 정보`, `- 기업: ${l.company || '(미입력)'}`, `- 직무: ${l.role || '(미입력)'}`,
+    posting ? `- 공고: ${posting.title || ''} (마감 ${(posting.deadline || '').replace('T', ' ')})` : null,
+    `- 문항: ${l.question || '(미입력)'}`, `- 글자 수 제한: ${l.limit ? l.limit + '자 (공백 포함)' : '없음'}`,
+    t ? `- 문항 유형: ${t.name}\n  - 권장 답변 순서: ${t.order}\n  - 피할 실수: ${t.avoid}` : null, '',
+    `## 제 경험 (${linkedExps(l).length ? '이 문항에 쓰려고 고른 경험' : '등록한 전체 경험'})`,
+    exps.length ? exps.map((e, i) => `### 경험 ${i + 1}\n${expSummary(e)}`).join('\n\n') : '(등록한 경험 없음)', '',
+    `## 강점 키워드`, s.keywords.map(k => `${k.kw}(${k.count})`).join(', ') || '(없음)', '',
+    csr.length ? `## ${l.company}의 대표 사회공헌 프로그램 (사회공헌백서 ${latest}년판)\n` + csr.filter(p => p.edition === latest).map(p => `- ${p.program}: ${p.description.slice(0, 140)}`).join('\n') + '\n' : null,
+    `## 현재 초안 (${(l.body || '').length}자)`, l.body && l.body.trim() ? l.body : '(아직 작성하지 않음)',
+  ].filter(x => x !== null).join('\n');
+}
+
+function projectFile() {
+  const s = strengths(P);
+  return [`# 자기소개서 코칭 프로젝트 자료`, `ESG 커리어 맵에서 ${new Date().toLocaleDateString('ko-KR')}에 내보낸 자료입니다.`, '',
+    `## 프로젝트 지침 (claude.ai 프로젝트의 "지침"에 붙여 넣으세요)`,
+    `당신은 한국 기업·공공기관 채용의 자기소개서를 지도하는 커리어 코치입니다. 이 프로젝트에 올린 제 경험 자료를 바탕으로 코칭합니다.`, RULES,
+    `- 대신 써 주기보다 제가 스스로 고칠 수 있게 질문하고 이끌어 주세요.`,
+    `- 문항을 받으면 먼저 문항 유형을 알려 주고, 그 유형에 맞는 답변 순서로 개요를 제안해 주세요.`, '',
+    `## 문항 유형별 답변 순서`, ...QTYPES.map(t => `- ${t.name}: ${t.order} (피할 실수: ${t.avoid})`), '',
+    `## 제 경험 ${P.experiences.length}개`, ...P.experiences.map((e, i) => `### 경험 ${i + 1}\n${expSummary(e)}\n`), '',
+    `## 강점 키워드`, s.keywords.map(k => `${k.kw}(${k.count})`).join(', ') || '(없음)', '',
+    `## 역량별 근거 경험 수`, s.competencies.map(c => `${c.name}: ${c.count}`).join(', ') || '(없음)', '',
+    `## 작성 중인 자기소개서 ${P.letters.length}개`,
+    ...P.letters.map(l => `### ${l.company || '기업 미입력'} · ${l.role || ''}\n- 문항: ${l.question || '(미입력)'}\n- 글자 수 제한: ${l.limit || '없음'}\n\n${l.body || '(아직 작성하지 않음)'}\n`),
+  ].join('\n');
+}
+
+async function openInClaude(l, mode) {
+  const text = chatPrompt(l, mode);
+  const enc = encodeURIComponent(text);
+  const url = enc.length <= 6000 ? `https://claude.ai/new?q=${enc}` : 'https://claude.ai/new';
+  let pr; try { pr = navigator.clipboard.writeText(text); } catch (e) { pr = Promise.reject(e); }
+  window.open(url, '_blank', 'noopener'); // 누른 순간에 열어야 팝업 차단을 피함
+  const copied = await pr.then(() => true, () => false);
+  const st = $('#cc-st');
+  if (st) st.innerHTML = copied
+    ? (enc.length <= 6000 ? '새 창에 요청 내용이 미리 채워집니다. 비어 있으면 입력창에 붙여 넣기(Ctrl+V / ⌘V) 하세요.' : '내용이 길어 클립보드에 복사했습니다. 열린 Claude 입력창에 붙여 넣기(Ctrl+V / ⌘V) 하세요.')
+    : '복사하지 못했습니다. 아래 "보낼 내용 보기"에서 직접 복사해 붙여 넣으세요.';
+  const pv = $('#cc-preview'); if (pv) pv.value = text;
+  if (!copied) { const d = $('#cc-details'); if (d) d.open = true; }
+}
+
+function pasteBack(l) {
+  const w = document.createElement('div'); w.className = 'modal';
+  w.innerHTML = `<div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="pb-t" style="max-width:640px"><h2 id="pb-t">Claude에서 다듬은 글 가져오기</h2>
+    <p class="note">Claude가 제안한 본문을 복사해 아래에 붙여 넣으세요. 그대로 쓰기보다 내 말투로 한 번 더 고치는 것을 권합니다.</p>
+    <textarea class="textarea" id="pb-text" rows="10" placeholder="여기에 붙여 넣기"></textarea>
+    <p class="note num" id="pb-n">0자</p>
+    <div class="row" style="justify-content:flex-end"><button class="btn" type="button" id="pb-cancel">취소</button><button class="btn" type="button" id="pb-append">본문 끝에 추가</button><button class="btn primary" type="button" id="pb-replace">본문 바꾸기</button></div></div>`;
+  document.body.appendChild(w);
+  const ta = w.querySelector('#pb-text'), close = () => w.remove();
+  ta.focus();
+  ta.addEventListener('input', () => { w.querySelector('#pb-n').textContent = `${ta.value.length.toLocaleString()}자${l.limit ? ' / ' + l.limit.toLocaleString() + '자' : ''}`; });
+  w.addEventListener('click', ev => { if (ev.target === w) close(); });
+  w.addEventListener('keydown', ev => { if (ev.key === 'Escape') close(); });
+  w.querySelector('#pb-cancel').onclick = close;
+  const apply = replace => {
+    const v = ta.value.trim(); if (!v) { close(); return; }
+    const f = $('#f-body');
+    if (replace && f.value.trim() && !w.dataset.armed) { w.dataset.armed = 1; w.querySelector('#pb-replace').textContent = '한 번 더 누르면 기존 본문을 바꿉니다'; return; }
+    f.value = replace ? v : (f.value ? f.value + '\n\n' : '') + v; f.dispatchEvent(new Event('input')); close(); toast('본문에 반영했습니다. 빠른 점검을 확인하세요');
+  };
+  w.querySelector('#pb-append').onclick = () => apply(false);
+  w.querySelector('#pb-replace').onclick = () => apply(true);
+}
+
 function paintMeter() {
   const l = letter(); const b = l.body || ''; const n = b.length, ns = b.replace(/\s/g, '').length;
   const lim = l.limit || 0, pct = lim ? Math.min(100, n / lim * 100) : 0;

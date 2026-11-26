@@ -137,8 +137,8 @@ export function setHeaderHeight() {
 }
 
 // 백업 파일 저장: 링크 클릭으로 내려받기
-export function downloadFile(name, text) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+export function downloadFile(name, text, type = 'application/json') {
+  const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
 }
