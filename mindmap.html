@@ -7,11 +7,11 @@
 <meta name="description" content="경험, 키워드, 역량을 마인드맵으로 연결하고 키워드별 경험과 역량을 확인합니다.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="assets/base.css">
 <style>
 /* 손그림 마인드맵: 따뜻한 종이 바탕, 파스텔 블록, 굵은 잉크 화살표. 이름과 선이 소속을 알려 주고 색은 가지 묶음만 표시 */
-:root{--paper:#fdfaf3;--ink2:#2b2a28;--hand:"Gaegu","IBM Plex Sans KR",system-ui,sans-serif;
+:root{--paper:#fdfaf3;--ink2:#2b2a28;--hand:var(--font);
   --p-root:#b8a9ec;--p0:#f7b2a8;--p1:#fcd5b0;--p2:#bfe3d7;--p3:#d5ccf5;--p4:#f9e3a3;--p5:#c8def7;
   --p0-soft:#fde3df;--p1-soft:#feeedc;--p2-soft:#e2f3ee;--p3-soft:#ebe6fb;--p4-soft:#fcf1d2;--p5-soft:#e5effb;--tie:#8f7fd6}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#1c1b18;--ink2:#ece7dc;--p-root:#9d8ce0;--p0:#e59a8f;--p1:#e9bb8f;--p2:#9ccbbb;--p3:#b7abe8;--p4:#e2c97f;--p5:#a9c5ea;--p0-soft:#f1c8c1;--p1-soft:#f3d9bd;--p2-soft:#c7e4da;--p3-soft:#d6cff3;--p4-soft:#efe0b0;--p5-soft:#cddff4;--tie:#b0a3ee}}
@@ -46,8 +46,8 @@
 .sec>h3{font-size:13px;color:var(--muted);font-weight:600}
 .node{cursor:pointer}
 .node .ring{stroke:none}
-.node text{font-family:var(--hand);fill:#2b2a28;font-weight:700}
-.t-root{font-size:26px}.t-exp{font-size:19px}.t-kw{font-size:16px;font-weight:400!important}
+.node text{font-family:var(--hand);fill:#2b2a28;font-weight:600}
+.t-root{font-size:20px;font-weight:700!important}.t-exp{font-size:15px}.t-kw{font-size:13px;font-weight:500!important}
 .t-count{font-family:var(--mono)!important;font-size:11px;fill:var(--muted)!important;font-weight:500!important}
 .node.kw .ring.shared{stroke:var(--tie);stroke-width:2;stroke-dasharray:5 3}
 .node.dim{opacity:.25}
@@ -68,7 +68,7 @@
 .drag-line{stroke:var(--ink2);stroke-width:2.5;stroke-dasharray:5 5;fill:none}
 .palette{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px;max-height:40%;overflow:auto}
 .pal-t{font-size:12.5px;color:var(--muted);font-weight:600;margin-right:4px}
-.pal{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--ink2);background:var(--p2-soft);color:#2b2a28;border-radius:999px;padding:2px 11px;font-family:var(--hand);font-size:16px;font-weight:700;cursor:pointer}
+.pal{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--ink2);background:var(--p2-soft);color:#2b2a28;border-radius:999px;padding:2px 11px;font-family:var(--hand);font-size:13px;font-weight:600;cursor:pointer}
 .pal i{width:9px;height:9px;border-radius:50%;background:var(--p2);border:1.5px solid #2b2a28}
 .pal.sel{background:var(--p2);outline:2px solid var(--accent);outline-offset:1px}
 .pal.dim{opacity:.35}
@@ -130,7 +130,7 @@ const kwComp = kw => {
 };
 const short = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 const ctx = document.createElement('canvas').getContext('2d');
-const tw = (t, size) => { ctx.font = `700 ${size}px "Gaegu", "IBM Plex Sans KR", system-ui, sans-serif`; return ctx.measureText(t).width; };
+const tw = (t, size) => { ctx.font = `600 ${size}px "IBM Plex Sans KR", system-ui, sans-serif`; return ctx.measureText(t).width; };
 const BRANCH = 6; // 가지 색 개수 (경험마다 돌아가며 사용, 이름과 선이 소속을 알려 줌)
 
 function build() {
@@ -148,7 +148,7 @@ function build() {
 
   // 나무형 배치: 오른쪽에 앞쪽 절반, 왼쪽에 나머지. 잎(키워드)은 경험 바깥쪽에 세로로 쌓는다.
   const root = { key: 'root', type: 'root', label: '나의 경험', x: 0, y: 0 };
-  root.w = Math.max(150, tw(root.label, 26) + 56); root.h = 78; boxes.push(root);
+  root.w = Math.max(150, tw(root.label, 20) + 56); root.h = 78; boxes.push(root);
   const right = exps.slice(0, Math.ceil(exps.length / 2)), left = exps.slice(Math.ceil(exps.length / 2));
   const LEAF_H = 34, LEAF_GAP = 12, BR_GAP = 34, X1 = root.w / 2 + 150;
   [[right, 1], [left, -1]].forEach(([list, side]) => {
@@ -159,14 +159,14 @@ function build() {
       const cy = y + heights[i] / 2; y += heights[i] + BR_GAP;
       const idx = exps.indexOf(e) % BRANCH;
       const label = short(e.title || '제목 없는 경험', 14);
-      const w = Math.max(110, tw(label, 19) + 40), h = 56;
+      const w = Math.max(110, tw(label, 15) + 40), h = 52;
       const bx = { key: 'e:' + e.id, type: 'exp', label, full: e.title, x: side * (X1 + w / 2), y: cy, w, h, branch: idx, side };
       boxes.push(bx);
       arrows.push({ from: root, to: bx, kind: 'trunk', key: bx.key });
       const kws = e.keywords || [];
       const ky0 = cy - ((kws.length - 1) * (LEAF_H + LEAF_GAP)) / 2;
       kws.forEach((k, j) => {
-        const lw = tw(k.kw, 16) + 34;
+        const lw = tw(k.kw, 13) + 30;
         const lx = bx.x + side * (w / 2 + 64 + lw / 2);
         const leaf = { key: 'k:' + k.kw, type: 'kw', label: k.kw, x: lx, y: ky0 + j * (LEAF_H + LEAF_GAP), w: lw, h: LEAF_H, branch: idx, side, exp: e.id, shared: kwExps.get(k.kw).size > 1 };
         boxes.push(leaf);
