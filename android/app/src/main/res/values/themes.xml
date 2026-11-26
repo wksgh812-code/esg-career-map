@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 밝은 테마: 웹뷰가 사이트에 밝은 화면(prefers-color-scheme: light)을 알린다 -->
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">#0d6b5c</item>
+        <item name="android:colorAccent">#0d6b5c</item>
+        <item name="android:statusBarColor">#ffffff</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#15201d</item>
+        <item name="android:windowBackground">#f5f7f6</item>
+    </style>
+</resources>

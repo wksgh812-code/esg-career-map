@@ -138,6 +138,7 @@ export function setHeaderHeight() {
 
 // 백업 파일 저장: 링크 클릭으로 내려받기
 export function downloadFile(name, text, type = 'application/json') {
+  if (window.AndroidBridge && window.AndroidBridge.saveFile) { window.AndroidBridge.saveFile(name, text, type); return; } // 안드로이드 앱
   const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
@@ -208,3 +209,9 @@ export function dday(v, now = new Date()) {
   return Math.round((a - b) / 86400000);
 }
 export const ddayLabel = n => n == null ? '' : n === 0 ? 'D-day' : n > 0 ? `D-${n}` : `D+${-n}`;
+
+// 클립보드 복사. 안드로이드 앱 안이면 앱 기능을 쓰고, 아니면 브라우저 클립보드를 쓴다. 성공하면 true로 끝나는 Promise.
+export function copyText(text) {
+  if (window.AndroidBridge && window.AndroidBridge.copy) { try { return Promise.resolve(!!window.AndroidBridge.copy(text)); } catch (e) { return Promise.resolve(false); } }
+  try { return navigator.clipboard.writeText(text).then(() => true, () => false); } catch (e) { return Promise.resolve(false); }
+}

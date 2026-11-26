@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+// GitHub Actions 실행 번호를 버전 번호로 사용 (로컬 빌드는 1)
+def runNumber = Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
+
+android {
+    namespace 'io.github.wksgh812code.esgcareermap'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.github.wksgh812code.esgcareermap'
+        minSdk 26
+        targetSdk 34
+        versionCode runNumber
+        versionName "1.0.${runNumber}"
+    }
+
+    // 서명 키는 저장소에 넣지 않는다. GitHub Actions가 Secrets에서 꺼내 임시 파일로 만든 뒤
+    // 경로와 비밀번호를 환경변수로 넘긴다. 같은 키로 서명해야 앱을 지우지 않고 업데이트할 수 있다.
+    def ksPath = System.getenv('ANDROID_KEYSTORE_PATH')
+    def ksPass = System.getenv('ANDROID_KEYSTORE_PASSWORD')
+    def hasKey = ksPath && ksPass && file(ksPath).exists()
+
+    signingConfigs {
+        if (hasKey) {
+            release {
+                storeFile file(ksPath)
+                storePassword ksPass
+                keyAlias 'esgcareermap'
+                keyPassword ksPass
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (hasKey) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

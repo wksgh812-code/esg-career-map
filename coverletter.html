@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>자기소개서 · ESG 커리어 맵</title>
 <meta name="description" content="자기소개서를 직접 쓰고 강점 키워드, 빠른 점검, AI 코칭·제안·점검·피드백을 받습니다.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0d6b5c">
+<link rel="icon" href="assets/icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="ESG 커리어 맵">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -62,7 +67,7 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 <datalist id="orgs"></datalist>
 
 <script type="module">
-import { COMPETENCIES, compName, load, save, uid, strengths, expSummary, toast, esc, setHeaderHeight, openBackup, ensureExamples, keywordUsed, dday, ddayLabel, statusName, downloadFile } from './assets/store.js';
+import { COMPETENCIES, compName, load, save, uid, strengths, expSummary, toast, esc, setHeaderHeight, openBackup, ensureExamples, keywordUsed, dday, ddayLabel, statusName, downloadFile, copyText } from './assets/store.js';
 
 let P = load();
 let cur = null, ORG = null;
@@ -266,9 +271,9 @@ async function openInClaude(l, mode) {
   const text = chatPrompt(l, mode);
   const enc = encodeURIComponent(text);
   const url = enc.length <= 6000 ? `https://claude.ai/new?q=${enc}` : 'https://claude.ai/new';
-  let pr; try { pr = navigator.clipboard.writeText(text); } catch (e) { pr = Promise.reject(e); }
+  const pr = copyText(text);
   window.open(url, '_blank', 'noopener'); // 누른 순간에 열어야 팝업 차단을 피함
-  const copied = await pr.then(() => true, () => false);
+  const copied = await pr;
   const st = $('#cc-st');
   if (st) st.innerHTML = copied
     ? (enc.length <= 6000 ? '새 창에 요청 내용이 미리 채워집니다. 비어 있으면 입력창에 붙여 넣기(Ctrl+V / ⌘V) 하세요.' : '내용이 길어 클립보드에 복사했습니다. 열린 Claude 입력창에 붙여 넣기(Ctrl+V / ⌘V) 하세요.')

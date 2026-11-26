@@ -8,6 +8,11 @@
 <meta property="og:title" content="ESG 커리어 맵">
 <meta property="og:description" content="기업별 사회공헌 활동과 채용공고를 한곳에서">
 <meta property="og:type" content="website">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0d6b5c">
+<link rel="icon" href="assets/icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="ESG 커리어 맵">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -279,6 +284,7 @@ function route(){
 window.addEventListener('hashchange',route);
 document.addEventListener('click',e=>{const a=e.target.closest('[data-copy]');if(!a)return;const n=a.dataset.copy,m=document.getElementById('copy-msg');
   const say=t=>{if(m)m.textContent=t};
+  if(window.AndroidBridge&&window.AndroidBridge.copy){window.AndroidBridge.copy(n);say(`'${n}'을(를) 복사했습니다. 열린 사이트의 검색창에 붙여 넣으세요.`);return}
   try{navigator.clipboard.writeText(n).then(()=>say(`'${n}'을(를) 복사했습니다. 열린 사이트의 검색창에 붙여 넣으세요.`),()=>say(`검색창에 '${n}'을(를) 입력하세요.`))}catch(err){say(`검색창에 '${n}'을(를) 입력하세요.`)}});
 let t;
 ['qn','qk'].forEach(id=>{const el=$('#'+id),key=id==='qn'?'n':'k';

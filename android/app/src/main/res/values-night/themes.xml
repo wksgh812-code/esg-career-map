@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 어두운 테마: 웹뷰가 사이트에 어두운 화면(prefers-color-scheme: dark)을 알린다 -->
+    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:colorPrimary">#4fc2ac</item>
+        <item name="android:colorAccent">#4fc2ac</item>
+        <item name="android:statusBarColor">#161e1b</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">#161e1b</item>
+        <item name="android:windowBackground">#0f1513</item>
+    </style>
+</resources>
