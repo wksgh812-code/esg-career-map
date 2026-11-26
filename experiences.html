@@ -35,6 +35,10 @@
     <a href="experiences.html" aria-current="page">경험 키워드</a>
     <a href="coverletter.html">자기소개서</a>
   </nav>
+  <div class="subnav" aria-label="경험 키워드 보기 방식">
+    <a href="experiences.html" aria-current="page">목록·편집</a>
+    <a href="mindmap.html">마인드맵</a>
+  </div>
   <div class="top-tools">
     <button class="btn ghost" id="backup" type="button">백업·복원</button>
     <button class="btn" id="ai-set" type="button">AI 설정</button>
@@ -46,7 +50,7 @@
     <div class="side-head">
       <div class="row" style="justify-content:space-between"><h2>내 경험 <span class="num" id="exp-n" style="color:var(--muted);font-weight:400"></span></h2>
         <button class="btn primary" id="new-exp" type="button">+ 새 경험</button></div>
-      <a href="#" id="to-map" style="font-size:13px">역량 지도 보기</a>
+      <div class="row" style="gap:12px;font-size:13px"><a href="#" id="to-map">역량 지도 보기</a><a href="mindmap.html">마인드맵으로 연결하기</a></div>
     </div>
     <ul class="list" id="exp-list"></ul>
   </aside>

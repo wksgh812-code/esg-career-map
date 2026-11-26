@@ -32,6 +32,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .nav a{padding:6px 12px;border-radius:7px;text-decoration:none;color:var(--muted);font-size:14px;font-weight:500;white-space:nowrap}
 .nav a:hover{color:var(--ink)}
 .nav a[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .08);font-weight:600}
+.subnav{display:flex;gap:4px}
+.subnav a{font-size:13px;padding:4px 10px;border-radius:999px;text-decoration:none;color:var(--muted);border:1px solid var(--line)}
+.subnav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
 .top-tools{margin-left:auto;display:flex;gap:8px;align-items:center}
 
 /* 버튼·입력 */

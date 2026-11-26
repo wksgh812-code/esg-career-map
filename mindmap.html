@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>경험 마인드맵 · ESG 커리어 맵</title>
+<meta name="description" content="경험, 키워드, 역량을 마인드맵으로 연결하고 키워드별 경험과 역량을 확인합니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/base.css">
+<style>
+/* 지도 색: 노드 종류별 3색 (모양·이름 표시와 함께 쓰는 보조 구분) */
+:root{--n-exp:#257de0;--n-kw:#f47230;--n-comp:#00b894;--edge:#c3ccc8;--edge-hi:#5d6b67;--root:#15201d}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--n-exp:#338ced;--n-kw:#e76624;--n-comp:#00a888;--edge:#33413c;--edge-hi:#93a39e;--root:#e4ece9}}
+:root[data-theme="dark"]{--n-exp:#338ced;--n-kw:#e76624;--n-comp:#00a888;--edge:#33413c;--edge-hi:#93a39e;--root:#e4ece9}
+.mm{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);height:calc(100vh - env(safe-area-inset-top,0px) - var(--hdr,60px));height:calc(100dvh - env(safe-area-inset-top,0px) - var(--hdr,60px))}
+.stage{position:relative;min-width:0;overflow:hidden;background:var(--bg)}
+.stage svg{width:100%;height:100%;display:block;touch-action:none;user-select:none;cursor:grab}
+.stage svg.panning{cursor:grabbing}
+.bar-top{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;pointer-events:none}
+.bar-top>*{pointer-events:auto}
+.legend{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:12.5px}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.lg-exp{width:14px;height:10px;border-radius:3px;background:var(--n-exp)}
+.lg-kw{width:16px;height:10px;border-radius:99px;border:2px solid var(--n-kw);background:var(--surface)}
+.lg-comp{width:10px;height:10px;border-radius:50%;background:var(--n-comp)}
+.zoom{margin-left:auto;display:flex;gap:4px}
+.zoom .btn{padding:5px 10px;min-width:34px;justify-content:center}
+.hint{position:absolute;left:12px;bottom:12px;right:12px;font-size:12.5px;color:var(--muted);pointer-events:none}
+.hint b{color:var(--ink);font-weight:600}
+.panel-r{border-left:1px solid var(--line);background:var(--surface);overflow:auto;padding:18px 18px 40px;display:grid;gap:16px;align-content:start;min-width:0}
+.kind{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:6px;background:var(--bg)}
+.card h3{font-size:14.5px}
+.card dl{margin:0;display:grid;grid-template-columns:44px 1fr;gap:4px 8px;font-size:13.5px}
+.card dt{color:var(--accent);font-family:var(--mono);font-size:12px;padding-top:2px}
+.card dd{margin:0;overflow-wrap:anywhere}
+.meta{font-size:12.5px;color:var(--muted)}
+.linklist{display:grid;gap:4px}
+.linklist label{display:flex;gap:8px;align-items:center;font-size:14px;padding:4px 6px;border-radius:6px;cursor:pointer}
+.linklist label:hover{background:var(--bg)}
+.sec{display:grid;gap:8px}
+.sec>h3{font-size:13px;color:var(--muted);font-weight:600}
+svg text{font-family:var(--font);font-size:13px;fill:var(--ink)}
+.node{cursor:pointer}
+.node.dim{opacity:.22}
+.edge{fill:none;stroke:var(--edge);stroke-width:1.5}
+.edge.root{stroke-dasharray:2 4}
+.edge.direct{stroke-dasharray:5 4}
+.edge.hi{stroke:var(--edge-hi);stroke-width:2.2}
+.edge.dim{opacity:.15}
+.node .hit{fill:transparent}
+.node.sel .ring{stroke:var(--ink);stroke-width:2.5}
+.node:focus-visible{outline:none}
+.node:focus-visible .ring{stroke:var(--accent);stroke-width:3}
+.drag-line{stroke:var(--ink);stroke-width:2;stroke-dasharray:4 4;fill:none}
+.node.drop .ring{stroke:var(--accent);stroke-width:3}
+@media (max-width:860px){
+  .mm{grid-template-columns:1fr;height:auto}
+  .stage{height:64vh}
+  .panel-r{border-left:0;border-top:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <a class="brand" href="./">ESG 커리어 맵 <small>사회공헌백서 2022–2025 기반</small></a>
+  <nav class="nav" aria-label="주 메뉴">
+    <a href="./">ESG 기업</a>
+    <a href="experiences.html" aria-current="page">경험 키워드</a>
+    <a href="coverletter.html">자기소개서</a>
+  </nav>
+  <div class="subnav" aria-label="경험 키워드 보기 방식">
+    <a href="experiences.html">목록·편집</a>
+    <a href="mindmap.html" aria-current="page">마인드맵</a>
+  </div>
+  <div class="top-tools"><button class="btn ghost" id="backup" type="button">백업·복원</button></div>
+</div></header>
+
+<div class="mm">
+  <div class="stage" id="stage">
+    <svg id="svg" role="img" aria-label="경험·키워드·역량 마인드맵"><g id="vp"><g id="edges"></g><g id="nodes"></g><path class="drag-line" id="drag-line" hidden></path></g></svg>
+    <div class="bar-top">
+      <div class="legend" aria-label="범례"><span><i class="lg-exp"></i>경험</span><span><i class="lg-kw"></i>키워드</span><span><i class="lg-comp"></i>역량</span></div>
+      <label class="legend" style="gap:6px;cursor:pointer"><input type="checkbox" id="show-all-comp"> 빈 역량도 보기</label>
+      <button class="btn" id="new-kw" type="button">+ 키워드 연결</button>
+      <div class="zoom"><button class="btn" id="z-in" type="button" aria-label="확대">+</button><button class="btn" id="z-out" type="button" aria-label="축소">−</button><button class="btn" id="z-fit" type="button">맞춤</button></div>
+    </div>
+    <p class="hint" id="hint"><b>노드를 누르면</b> 오른쪽에 자세한 정보가 나옵니다. <b>경험을 끌어 키워드나 역량 위에 놓으면</b> 바로 연결됩니다. 빈 곳을 끌면 화면이 움직입니다.</p>
+  </div>
+  <aside class="panel-r" id="panel" aria-live="polite"></aside>
+</div>
+
+<script type="module">
+import { COMPETENCIES, compName, load, save, strengths, esc, setHeaderHeight, ensureExamples, openBackup, toast } from './assets/store.js';
+
+let P = ensureExamples(load());
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+setHeaderHeight();
+let sel = null;            // 선택한 노드 id
+let view = { x: 0, y: 0, k: 1 };
+let G = { nodes: [], edges: [], byId: {} };
+
+// ---------- 그래프 만들기 ----------
+const kwComp = kw => { // 키워드가 연결된 역량: 경험들에서 가장 많이 쓴 것
+  const c = {}; P.experiences.forEach(e => (e.keywords || []).forEach(k => { if (k.kw === kw && k.comp) c[k.comp] = (c[k.comp] || 0) + 1; }));
+  return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+};
+const short = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+const ctx = document.createElement('canvas').getContext('2d');
+const tw = (t, w = 400) => { ctx.font = `${w} 13px "IBM Plex Sans KR", system-ui, sans-serif`; return ctx.measureText(t).width; };
+
+function build() {
+  const nodes = [], edges = [], byId = {};
+  const add = n => { nodes.push(n); byId[n.id] = n; return n; };
+  add({ id: 'root', type: 'root', label: '나의 경험' });
+  const exps = P.experiences;
+  exps.forEach(e => add({ id: 'e:' + e.id, type: 'exp', ref: e.id, label: short(e.title || '제목 없는 경험', 16) }));
+  const kws = new Map();
+  exps.forEach(e => (e.keywords || []).forEach(k => { if (!kws.has(k.kw)) kws.set(k.kw, []); kws.get(k.kw).push(e.id); }));
+  kws.forEach((eids, kw) => { add({ id: 'k:' + kw, type: 'kw', ref: kw, label: kw, exps: [...new Set(eids)] }); });
+  const usedComp = new Set();
+  kws.forEach((_, kw) => { const c = kwComp(kw); if (c) usedComp.add(c); });
+  exps.forEach(e => (e.competencies || []).forEach(c => usedComp.add(c)));
+  const showAll = $('#show-all-comp').checked;
+  COMPETENCIES.forEach(c => { if (showAll || usedComp.has(c.id)) add({ id: 'c:' + c.id, type: 'comp', ref: c.id, label: c.name }); });
+  exps.forEach(e => edges.push({ a: 'root', b: 'e:' + e.id, kind: 'root' }));
+  kws.forEach((eids, kw) => {
+    [...new Set(eids)].forEach(id => edges.push({ a: 'e:' + id, b: 'k:' + kw, kind: 'ek' }));
+    const c = kwComp(kw); if (c && byId['c:' + c]) edges.push({ a: 'k:' + kw, b: 'c:' + c, kind: 'kc' });
+  });
+  // 키워드로 이어지지 않은 경험→역량 직접 연결 (점선)
+  exps.forEach(e => (e.competencies || []).forEach(c => {
+    const viaKw = (e.keywords || []).some(k => kwComp(k.kw) === c);
+    if (!viaKw && byId['c:' + c]) edges.push({ a: 'e:' + e.id, b: 'c:' + c, kind: 'direct' });
+  }));
+  G = { nodes, edges, byId };
+  layout();
+}
+
+// 방사형 배치: 중심(나) → 경험 → 키워드 → 역량. 공유 키워드는 경험 사이에 놓인다.
+function layout() {
+  const { nodes, byId, edges } = G;
+  const exps = nodes.filter(n => n.type === 'exp'), kws = nodes.filter(n => n.type === 'kw'), comps = nodes.filter(n => n.type === 'comp');
+  const R1 = Math.max(120, exps.length * 26), R2 = R1 + 125 + Math.max(0, kws.length - 14) * 5, R3 = R2 + 120;
+  byId.root.x = 0; byId.root.y = 0;
+  exps.forEach((n, i) => { n.a = -Math.PI / 2 + i / Math.max(1, exps.length) * Math.PI * 2; });
+  const circMean = as => { let s = 0, c = 0; as.forEach(a => { s += Math.sin(a); c += Math.cos(a); }); return Math.atan2(s, c); };
+  kws.forEach(n => { n.a = circMean(n.exps.map(id => byId['e:' + id].a)); });
+  comps.forEach(n => {
+    const ks = edges.filter(e => e.kind !== 'root' && e.b === n.id).map(e => byId[e.a]).filter(Boolean);
+    n.a = ks.length ? circMean(ks.map(k => k.a)) : (COMPETENCIES.findIndex(c => c.id === n.ref) / COMPETENCIES.length) * Math.PI * 2;
+  });
+  const spread = (arr, R, gap) => { // 같은 고리 안에서 겹치지 않도록 각도를 벌림
+    arr.sort((a, b) => a.a - b.a);
+    for (let it = 0; it < 60; it++) {
+      for (let i = 0; i < arr.length; i++) {
+        const p = arr[i], q = arr[(i + 1) % arr.length]; if (p === q) continue;
+        let d = q.a - p.a; if (i === arr.length - 1) d += Math.PI * 2;
+        const need = (p.w / 2 + q.w / 2 + gap) / R;
+        if (d < need) { const m = (need - d) / 2; p.a -= m; q.a += m; }
+      }
+    }
+  };
+  nodes.forEach(n => { n.w = n.type === 'exp' ? tw(n.label, 600) + 28 : n.type === 'kw' ? tw(n.label) + 26 : n.type === 'comp' ? tw(n.label, 600) + 30 : 100; n.h = n.type === 'exp' ? 34 : 28; });
+  spread(exps, R1, 16); spread(kws, R2, 10); spread(comps, R3, 14);
+  exps.forEach(n => { n.x = Math.cos(n.a) * R1; n.y = Math.sin(n.a) * R1; });
+  kws.forEach(n => { n.x = Math.cos(n.a) * R2; n.y = Math.sin(n.a) * R2; });
+  comps.forEach(n => { n.x = Math.cos(n.a) * R3; n.y = Math.sin(n.a) * R3; });
+}
+
+// ---------- 그리기 ----------
+function el(tag, attrs = {}, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
+function neighbors(id) {
+  const s = new Set([id]);
+  G.edges.forEach(e => { if (e.a === id) s.add(e.b); if (e.b === id) s.add(e.a); });
+  const n = G.byId[id];
+  return s;
+}
+function draw() {
+  const eg = $('#edges'), ng = $('#nodes'); eg.innerHTML = ''; ng.innerHTML = '';
+  const nb = sel ? neighbors(sel) : null;
+  G.edges.forEach(e => {
+    const a = G.byId[e.a], b = G.byId[e.b]; if (!a || !b) return;
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, bend = e.kind === 'root' ? 0 : .12;
+    const cx = mx - (b.y - a.y) * bend, cy = my + (b.x - a.x) * bend;
+    const on = sel && (e.a === sel || e.b === sel);
+    el('path', { d: `M${a.x},${a.y} Q${cx},${cy} ${b.x},${b.y}`, class: `edge ${e.kind}${on ? ' hi' : ''}${sel && !on ? ' dim' : ''}` }, eg);
+  });
+  G.nodes.forEach(n => {
+    const g = el('g', { class: `node ${n.type}${sel === n.id ? ' sel' : ''}${nb && !nb.has(n.id) ? ' dim' : ''}`, transform: `translate(${n.x},${n.y})`, tabindex: n.type === 'root' ? -1 : 0, role: 'button', 'data-id': n.id, 'aria-label': `${({ exp: '경험', kw: '키워드', comp: '역량', root: '' })[n.type]} ${n.label}` }, ng);
+    if (n.type === 'root') {
+      el('circle', { r: 40, fill: 'var(--root)', class: 'ring' }, g);
+      const t = el('text', { 'text-anchor': 'middle', dy: '0.35em', style: 'fill:var(--surface);font-weight:700' }, g); t.textContent = n.label;
+    } else if (n.type === 'exp') {
+      el('rect', { x: -n.w / 2, y: -n.h / 2, width: n.w, height: n.h, rx: 6, fill: 'var(--n-exp)', class: 'ring', stroke: 'var(--surface)', 'stroke-width': 2 }, g);
+      const t = el('text', { 'text-anchor': 'middle', dy: '0.35em', style: 'fill:#fff;font-weight:600' }, g); t.textContent = n.label;
+    } else if (n.type === 'kw') {
+      el('rect', { x: -n.w / 2, y: -n.h / 2, width: n.w, height: n.h, rx: n.h / 2, fill: 'var(--surface)', stroke: 'var(--n-kw)', 'stroke-width': 2, class: 'ring' }, g);
+      const t = el('text', { 'text-anchor': 'middle', dy: '0.35em' }, g); t.textContent = n.label;
+      if (n.exps.length > 1) { const b = el('text', { x: n.w / 2 - 2, y: -n.h / 2 - 2, 'text-anchor': 'end', style: 'font-size:11px;fill:var(--muted);font-family:var(--mono)' }, g); b.textContent = '×' + n.exps.length; }
+    } else {
+      el('rect', { x: -n.w / 2, y: -n.h / 2, width: n.w, height: n.h, rx: 6, fill: 'var(--surface)', stroke: 'var(--line)', class: 'ring' }, g);
+      el('circle', { cx: -n.w / 2 + 13, cy: 0, r: 5.5, fill: 'var(--n-comp)' }, g);
+      const t = el('text', { x: -n.w / 2 + 24, dy: '0.35em', style: 'font-weight:600' }, g); t.textContent = n.label;
+    }
+    el('rect', { class: 'hit', x: -n.w / 2 - 6, y: -n.h / 2 - 6, width: n.w + 12, height: n.h + 12 }, g);
+  });
+  applyView();
+}
+function applyView() { $('#vp').setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`); }
+function fit() {
+  const svg = $('#svg'), W = svg.clientWidth, H = svg.clientHeight;
+  if (!G.nodes.length || !W) return;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  G.nodes.forEach(n => { x0 = Math.min(x0, n.x - n.w / 2); x1 = Math.max(x1, n.x + n.w / 2); y0 = Math.min(y0, n.y - n.h / 2); y1 = Math.max(y1, n.y + n.h / 2); });
+  const pad = 40, k = Math.min(1.4, Math.min((W - pad * 2) / (x1 - x0), (H - pad * 2 - 40) / (y1 - y0)));
+  view.k = k; view.x = W / 2 - (x0 + x1) / 2 * k; view.y = H / 2 + 10 - (y0 + y1) / 2 * k; applyView();
+}
+function zoomAt(f, cx, cy) {
+  const k = Math.max(.25, Math.min(3, view.k * f)); const r = k / view.k;
+  view.x = cx - (cx - view.x) * r; view.y = cy - (cy - view.y) * r; view.k = k; applyView();
+}
+
+// ---------- 상호작용: 선택, 끌어서 연결, 화면 이동 ----------
+const svg = $('#svg');
+const toWorld = (cx, cy) => { const r = svg.getBoundingClientRect(); return { x: (cx - r.left - view.x) / view.k, y: (cy - r.top - view.y) / view.k }; };
+const nodeAt = (cx, cy) => { const t = document.elementFromPoint(cx, cy); const g = t && t.closest('.node'); return g ? G.byId[g.dataset.id] : null; };
+let drag = null;
+svg.addEventListener('pointerdown', ev => {
+  const g = ev.target.closest('.node');
+  svg.setPointerCapture(ev.pointerId);
+  if (g) { drag = { mode: 'node', id: g.dataset.id, sx: ev.clientX, sy: ev.clientY, moved: false }; }
+  else { drag = { mode: 'pan', sx: ev.clientX, sy: ev.clientY, vx: view.x, vy: view.y }; svg.classList.add('panning'); }
+});
+svg.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  if (drag.mode === 'pan') { view.x = drag.vx + ev.clientX - drag.sx; view.y = drag.vy + ev.clientY - drag.sy; applyView(); return; }
+  if (Math.hypot(ev.clientX - drag.sx, ev.clientY - drag.sy) > 6) drag.moved = true;
+  const n = G.byId[drag.id];
+  if (drag.moved && (n.type === 'exp' || n.type === 'kw')) {
+    const w = toWorld(ev.clientX, ev.clientY), line = $('#drag-line');
+    line.hidden = false; line.setAttribute('d', `M${n.x},${n.y} L${w.x},${w.y}`);
+    document.querySelectorAll('.node.drop').forEach(x => x.classList.remove('drop'));
+    const t = nodeAt(ev.clientX, ev.clientY); if (t && canLink(n, t)) document.querySelector(`.node[data-id="${CSS.escape(t.id)}"]`).classList.add('drop');
+  }
+});
+svg.addEventListener('pointerup', ev => {
+  const d = drag; drag = null; svg.classList.remove('panning'); $('#drag-line').hidden = true;
+  document.querySelectorAll('.node.drop').forEach(x => x.classList.remove('drop'));
+  if (!d) return;
+  if (d.mode === 'pan') { if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < 4) select(null); return; }
+  if (!d.moved) { select(d.id); return; }
+  const a = G.byId[d.id], b = nodeAt(ev.clientX, ev.clientY);
+  if (b && canLink(a, b)) link(a, b);
+});
+svg.addEventListener('wheel', ev => { ev.preventDefault(); const r = svg.getBoundingClientRect(); zoomAt(ev.deltaY < 0 ? 1.12 : 1 / 1.12, ev.clientX - r.left, ev.clientY - r.top); }, { passive: false });
+svg.addEventListener('keydown', ev => { const g = ev.target.closest('.node'); if (g && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); select(g.dataset.id); } });
+
+function canLink(a, b) {
+  if (!a || !b || a === b) return false;
+  const t = [a.type, b.type].sort().join('-');
+  return t === 'exp-kw' || t === 'comp-exp' || t === 'comp-kw';
+}
+function link(a, b) {
+  const [x, y] = [a, b].sort((p, q) => p.type.localeCompare(q.type)); // comp < exp < kw
+  if (x.type === 'exp' && y.type === 'kw') { // 경험 ↔ 키워드
+    const e = P.experiences.find(e => e.id === x.ref); e.keywords ||= [];
+    if (e.keywords.some(k => k.kw === y.ref)) { toast('이미 연결되어 있습니다'); return; }
+    const c = kwComp(y.ref); e.keywords.push({ kw: y.ref, comp: c });
+    if (c && !(e.competencies || []).includes(c)) (e.competencies ||= []).push(c);
+    commit(`'${e.title}'에 '${y.ref}' 키워드를 연결했습니다`, y.id);
+  } else if (x.type === 'comp' && y.type === 'exp') { // 역량 ↔ 경험
+    const e = P.experiences.find(e => e.id === y.ref); e.competencies ||= [];
+    if (e.competencies.includes(x.ref)) { toast('이미 연결되어 있습니다'); return; }
+    e.competencies.push(x.ref); commit(`'${e.title}'을 '${compName(x.ref)}' 역량에 연결했습니다`, y.id);
+  } else if (x.type === 'comp' && y.type === 'kw') { // 역량 ↔ 키워드: 키워드의 연결 역량 변경
+    setKwComp(y.ref, x.ref); commit(`'${y.ref}' 키워드를 '${compName(x.ref)}' 역량에 연결했습니다`, y.id);
+  }
+}
+function setKwComp(kw, comp) {
+  P.experiences.forEach(e => (e.keywords || []).forEach(k => {
+    if (k.kw === kw) { k.comp = comp; if (!(e.competencies || []).includes(comp)) (e.competencies ||= []).push(comp); }
+  }));
+}
+function commit(msg, keepSel) {
+  P.experiences.forEach(e => { delete e.example; });
+  save(P); if (msg) toast(msg);
+  const k = { ...view }; build(); view = k; sel = keepSel && G.byId[keepSel] ? keepSel : null; draw(); renderPanel();
+}
+function select(id) { sel = id && id !== 'root' ? id : null; draw(); renderPanel(); }
+
+// ---------- 오른쪽 상세 창 ----------
+const STAR = [['situation', 'S', '상황'], ['task', 'T', '과제'], ['action', 'A', '행동'], ['result', 'R', '결과']];
+const expById = id => P.experiences.find(e => e.id === id);
+function expCard(e, open = true) {
+  return `<div class="card"><div class="row" style="justify-content:space-between"><h3>${esc(e.title || '제목 없는 경험')}</h3><a class="meta" href="experiences.html#${e.id}">편집</a></div>
+    <div class="meta">${esc(e.type || '기타')}${e.period ? ' · ' + esc(e.period) : ''}${e.role ? ' · ' + esc(e.role) : ''}</div>
+    ${open ? `<dl>${STAR.filter(([k]) => e[k]).map(([k, b, n]) => `<dt>${b} ${n}</dt><dd>${esc(e[k])}</dd>`).join('') || '<dd class="meta" style="grid-column:1/-1">아직 내용이 없습니다.</dd>'}</dl>` : ''}
+    <div class="chips">${(e.keywords || []).map(k => `<button class="chip" type="button" data-go="k:${esc(k.kw)}">${esc(k.kw)}</button>`).join('')}</div>
+    <div class="meta">역량: ${(e.competencies || []).map(compName).join(', ') || '없음'}</div></div>`;
+}
+function renderPanel() {
+  const pn = $('#panel'); const n = sel && G.byId[sel];
+  if (!n) {
+    const s = strengths(P);
+    const shared = G.nodes.filter(x => x.type === 'kw' && x.exps.length > 1);
+    pn.innerHTML = `<div><div class="eyebrow">경험 마인드맵</div><h2 style="font-size:20px">한눈에 보는 경험 연결</h2></div>
+      <p class="note">경험 ${P.experiences.length}개, 키워드 ${s.keywords.length}개, 역량 ${s.competencies.length}개가 연결되어 있습니다.</p>
+      <div class="sec"><h3>여러 경험을 잇는 키워드</h3>${shared.length ? `<div class="chips">${shared.map(k => `<button class="chip on" type="button" data-go="${esc(k.id)}">${esc(k.label)} <small>경험 ${k.exps.length}개</small></button>`).join('')}</div>` : '<p class="note">아직 두 경험 이상에 공통으로 쓰인 키워드가 없습니다. 경험을 끌어 다른 경험의 키워드 위에 놓아 보세요.</p>'}</div>
+      <div class="sec"><h3>근거가 많은 역량</h3>${s.competencies.slice(0, 5).map(c => `<button class="chip" type="button" data-go="c:${c.id}">${esc(c.name)} <small>${c.count}</small></button>`).join(' ') || '<p class="note">연결된 역량이 없습니다.</p>'}</div>
+      <div class="sec"><h3>연결하는 방법</h3><ul class="note" style="margin:0;padding-left:18px;display:grid;gap:4px">
+        <li>경험을 끌어 키워드 위에 놓으면 그 키워드가 경험에 붙습니다.</li>
+        <li>경험을 역량 위에 놓으면 역량이 연결됩니다.</li>
+        <li>키워드를 역량 위에 놓으면 키워드의 연결 역량이 바뀝니다.</li>
+        <li>키워드를 누르면 여러 경험에 한 번에 연결할 수 있습니다.</li></ul></div>`;
+  } else if (n.type === 'kw') {
+    const comp = kwComp(n.ref);
+    const exps = n.exps.map(expById).filter(Boolean);
+    const comps = [...new Set(exps.flatMap(e => e.competencies || []))];
+    pn.innerHTML = `<div><span class="kind"><i class="lg-kw" style="display:inline-block"></i>키워드</span><h2 style="font-size:20px;margin-top:4px">${esc(n.ref)}</h2></div>
+      <div class="sec"><h3>연결 역량</h3><select class="select" id="kw-comp">${COMPETENCIES.map(c => `<option value="${c.id}" ${c.id === comp ? 'selected' : ''}>${c.name}</option>`).join('')}</select>
+        <p class="note">${comp ? esc(COMPETENCIES.find(c => c.id === comp).desc) : ''}</p></div>
+      <div class="sec"><h3>관련 역량 (이 키워드를 가진 경험 전체 기준)</h3><div class="chips">${comps.map(c => `<button class="chip ${c === comp ? 'on' : ''}" type="button" data-go="c:${c}">${esc(compName(c))}</button>`).join('') || '<span class="note">없음</span>'}</div></div>
+      <div class="sec"><h3>이 키워드를 가진 경험 ${exps.length}개</h3>${exps.map(e => expCard(e)).join('')}</div>
+      <div class="sec"><h3>여러 경험에 한 번에 연결</h3><div class="linklist">${P.experiences.map(e => `<label><input type="checkbox" data-link="${e.id}" ${n.exps.includes(e.id) ? 'checked' : ''}> ${esc(e.title || '제목 없는 경험')}</label>`).join('')}</div></div>
+      <button class="btn danger" type="button" id="kw-del">모든 경험에서 이 키워드 빼기</button>`;
+    $('#kw-comp').onchange = ev => { setKwComp(n.ref, ev.target.value); commit(`연결 역량을 '${compName(ev.target.value)}'(으)로 바꿨습니다`, n.id); };
+    pn.querySelectorAll('[data-link]').forEach(cb => cb.onchange = () => {
+      const e = expById(cb.dataset.link); e.keywords ||= [];
+      if (cb.checked) { e.keywords.push({ kw: n.ref, comp }); if (comp && !(e.competencies || []).includes(comp)) (e.competencies ||= []).push(comp); }
+      else e.keywords = e.keywords.filter(k => k.kw !== n.ref);
+      const still = P.experiences.some(x => (x.keywords || []).some(k => k.kw === n.ref));
+      commit(null, still ? n.id : null);
+    });
+    $('#kw-del').onclick = ev => {
+      const b = ev.currentTarget;
+      if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = '한 번 더 누르면 뺍니다'; return; }
+      P.experiences.forEach(e => { e.keywords = (e.keywords || []).filter(k => k.kw !== n.ref); }); commit(`'${n.ref}' 키워드를 뺐습니다`, null);
+    };
+  } else if (n.type === 'exp') {
+    const e = expById(n.ref);
+    const rel = P.experiences.filter(x => x.id !== e.id).map(x => ({ x, common: (x.keywords || []).filter(k => (e.keywords || []).some(m => m.kw === k.kw)).map(k => k.kw) })).filter(r => r.common.length);
+    pn.innerHTML = `<div><span class="kind"><i class="lg-exp" style="display:inline-block"></i>경험</span></div>${expCard(e)}
+      <div class="sec"><h3>연결 역량</h3>${(e.competencies || []).map(c => `<div class="card" style="padding:8px 10px"><button class="chip on" type="button" data-go="c:${c}" style="justify-self:start">${esc(compName(c))}</button><span class="meta">${esc(COMPETENCIES.find(x => x.id === c)?.desc || '')}</span></div>`).join('') || '<p class="note">연결된 역량이 없습니다. 이 경험을 끌어 역량 위에 놓아 보세요.</p>'}</div>
+      <div class="sec"><h3>키워드로 이어진 다른 경험</h3>${rel.length ? rel.map(r => `<button class="item" type="button" data-go="e:${r.x.id}" style="border:1px solid var(--line);border-radius:8px"><span class="nm">${esc(r.x.title || '제목 없음')}</span><span class="sub">공통 키워드: ${esc(r.common.join(', '))}</span></button>`).join('') : '<p class="note">공통 키워드를 가진 경험이 아직 없습니다.</p>'}</div>`;
+  } else if (n.type === 'comp') {
+    const c = COMPETENCIES.find(x => x.id === n.ref);
+    const exps = P.experiences.filter(e => (e.competencies || []).includes(c.id));
+    const kws = G.nodes.filter(k => k.type === 'kw' && kwComp(k.ref) === c.id);
+    pn.innerHTML = `<div><span class="kind"><i class="lg-comp" style="display:inline-block"></i>역량</span><h2 style="font-size:20px;margin-top:4px">${esc(c.name)}</h2><p class="note">${esc(c.desc)}</p></div>
+      <div class="sec"><h3>이 역량으로 이어진 키워드</h3><div class="chips">${kws.map(k => `<button class="chip" type="button" data-go="${esc(k.id)}">${esc(k.label)}</button>`).join('') || '<span class="note">없음</span>'}</div></div>
+      <div class="sec"><h3>근거 경험 ${exps.length}개</h3>${exps.map(e => expCard(e, false)).join('') || '<p class="note">아직 근거 경험이 없습니다. 경험을 끌어 이 역량 위에 놓아 보세요.</p>'}</div>`;
+  }
+  pn.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { if (G.byId[b.dataset.go]) select(b.dataset.go); });
+}
+
+// 새 키워드를 만들어 여러 경험에 연결
+$('#new-kw').onclick = () => {
+  sel = null; draw();
+  $('#panel').innerHTML = `<div><div class="eyebrow">키워드 연결</div><h2 style="font-size:20px">새 키워드를 여러 경험에 연결</h2></div>
+    <label class="field"><span>키워드</span><input class="input" id="nk" maxlength="20" placeholder="예: 예산 관리"></label>
+    <label class="field"><span>연결 역량</span><select class="select" id="nc">${COMPETENCIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></label>
+    <div class="sec"><h3>연결할 경험</h3><div class="linklist">${P.experiences.map(e => `<label><input type="checkbox" data-pick="${e.id}"> ${esc(e.title || '제목 없는 경험')}</label>`).join('') || '<p class="note">먼저 경험을 등록하세요.</p>'}</div></div>
+    <div class="row"><button class="btn primary" id="nk-save" type="button">연결하기</button><button class="btn" id="nk-cancel" type="button">취소</button></div><p class="ai-err" id="nk-err"></p>`;
+  $('#nk').focus();
+  $('#nk-cancel').onclick = () => renderPanel();
+  $('#nk-save').onclick = () => {
+    const kw = $('#nk').value.trim(), comp = $('#nc').value, ids = [...document.querySelectorAll('[data-pick]:checked')].map(x => x.dataset.pick);
+    if (!kw) { $('#nk-err').textContent = '키워드를 입력하세요.'; return; }
+    if (!ids.length) { $('#nk-err').textContent = '연결할 경험을 하나 이상 고르세요.'; return; }
+    ids.forEach(id => { const e = expById(id); e.keywords ||= []; if (!e.keywords.some(k => k.kw === kw)) e.keywords.push({ kw, comp }); if (!(e.competencies || []).includes(comp)) (e.competencies ||= []).push(comp); });
+    commit(`'${kw}' 키워드를 경험 ${ids.length}개에 연결했습니다`, 'k:' + kw);
+  };
+};
+$('#show-all-comp').onchange = () => { build(); draw(); fit(); };
+$('#z-in').onclick = () => zoomAt(1.2, svg.clientWidth / 2, svg.clientHeight / 2);
+$('#z-out').onclick = () => zoomAt(1 / 1.2, svg.clientWidth / 2, svg.clientHeight / 2);
+$('#z-fit').onclick = fit;
+$('#backup').onclick = () => openBackup(P, np => { P = np; build(); draw(); fit(); renderPanel(); });
+window.addEventListener('resize', () => fit());
+window.addEventListener('storage', ev => { if (ev.key === 'ecm-profile-v1') { P = load(); build(); draw(); renderPanel(); } });
+
+build(); draw(); renderPanel();
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { build(); draw(); fit(); });
+requestAnimationFrame(fit);
+if (!P.experiences.length) $('#hint').innerHTML = '아직 경험이 없습니다. <b>목록·편집</b>에서 경험을 먼저 등록하세요.';
+</script>
+</body>
+</html>
