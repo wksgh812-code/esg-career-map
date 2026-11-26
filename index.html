@@ -38,7 +38,8 @@ button,input,select{font:inherit;color:inherit}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
 .top-in{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .brand{font-weight:700;font-size:18px;letter-spacing:-.01em;display:flex;flex-direction:column;line-height:1.25}
-.nav{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
+.nav{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
 .nav a{padding:6px 12px;border-radius:7px;text-decoration:none;color:var(--muted);font-size:14px;font-weight:500;white-space:nowrap}
 .nav a:hover{color:var(--ink)}
 .nav a[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .08);font-weight:600}
@@ -131,6 +132,7 @@ section{display:grid;gap:12px}
     <a href="./" aria-current="page">ESG 기업</a>
     <a href="experiences.html">경험 키워드</a>
     <a href="coverletter.html">자기소개서</a>
+    <a href="calendar.html">채용 달력</a>
     <a href="guide-market.html">채용 가이드</a>
   </nav>
   <div class="qbar" role="search">
@@ -258,7 +260,7 @@ function renderDetail(){
       <div class="pm src">사회공헌백서 ${p.edition} 부록 p.${p.page}</div></article>`).join('')}</div>
   </section>
   <section class="jobs" aria-labelledby="h-job">
-    <h2 id="h-job">채용공고</h2>
+    <div class="row" style="justify-content:space-between"><h2 id="h-job">채용공고</h2><a class="joblink" style="padding:6px 12px" href="calendar.html?company=${encodeURIComponent(o.name)}">+ 채용 달력에 추가</a></div>
     <p class="note">시제품 단계라 실시간 공고 대신 채용 사이트로 연결합니다. 자소설닷컴·슈퍼루키는 누르면 기업명이 복사되니 사이트 검색창에 붙여 넣으세요. 사람인·고용24 오픈API를 연동하면 이 자리에 진행 중인 공고 목록(직무, 경력, 마감일)이 표시되고, ${ESGKW.join('·')} 관련 직무가 위에 강조됩니다.</p>
     <div class="jobgrid">${jobLinks(o.name).map(([s,u,l,c])=>`<a class="joblink" href="${u}" target="_blank" rel="noopener"${c?` data-copy="${esc(o.name)}"`:''}>${s}<span>${l} ↗</span></a>`).join('')}</div>
     <p class="note" id="copy-msg" role="status"></p>

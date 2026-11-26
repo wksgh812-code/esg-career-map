@@ -65,12 +65,12 @@ export function suggestKeywords(text, have = []) {
   return out;
 }
 
-const empty = () => ({ experiences: [], letters: [], updatedAt: null });
+const empty = () => ({ experiences: [], letters: [], postings: [], updatedAt: null });
 
 export function load() {
   try {
     const p = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (p && Array.isArray(p.experiences) && Array.isArray(p.letters)) return p;
+    if (p && Array.isArray(p.experiences) && Array.isArray(p.letters)) { if (!Array.isArray(p.postings)) p.postings = []; return p; }
   } catch (e) { /* 저장소를 쓸 수 없는 환경 */ }
   return empty();
 }
@@ -120,7 +120,7 @@ export function exportJSON(p) { return JSON.stringify({ app: 'esg-career-map', v
 export function importJSON(text) {
   const d = JSON.parse(text);
   if (!d || !Array.isArray(d.experiences) || !Array.isArray(d.letters)) throw new Error('형식이 맞지 않는 파일입니다.');
-  return { experiences: d.experiences, letters: d.letters, updatedAt: d.updatedAt || null, seeded: true };
+  return { experiences: d.experiences, letters: d.letters, postings: Array.isArray(d.postings) ? d.postings : [], updatedAt: d.updatedAt || null, seeded: true, seededLetter: true };
 }
 
 export function toast(msg) {
@@ -174,7 +174,7 @@ export function openBackup(p, onRestore) {
     <p class="note">경험과 자기소개서는 이 브라우저에만 저장됩니다. 다른 기기로 옮기거나 브라우저 기록을 지우기 전에 백업 파일을 받아 두세요.</p>
     <div class="row"><button class="btn primary" id="bk-save" type="button">백업 파일 받기</button>
     <label class="btn" for="bk-file">백업 파일로 복원</label><input id="bk-file" type="file" accept="application/json,.json" hidden></div>
-    <p class="note" id="bk-msg">현재 경험 ${p.experiences.length}개, 자기소개서 ${p.letters.length}개</p>
+    <p class="note" id="bk-msg">현재 경험 ${p.experiences.length}개, 자기소개서 ${p.letters.length}개, 공고 ${(p.postings || []).length}개</p>
     <div class="row" style="justify-content:flex-end"><button class="btn" id="bk-close" type="button">닫기</button></div></div>`;
   document.body.appendChild(w);
   const close = () => w.remove();
@@ -184,8 +184,27 @@ export function openBackup(p, onRestore) {
   w.querySelector('#bk-save').onclick = () => downloadFile(`esg-career-map-backup-${new Date().toISOString().slice(0, 10)}.json`, exportJSON(p));
   w.querySelector('#bk-file').onchange = async ev => {
     const f = ev.target.files[0]; if (!f) return;
-    try { const np = importJSON(await f.text()); save(np); w.querySelector('#bk-msg').textContent = `복원했습니다: 경험 ${np.experiences.length}개, 자기소개서 ${np.letters.length}개`; onRestore && onRestore(np); }
+    try { const np = importJSON(await f.text()); save(np); w.querySelector('#bk-msg').textContent = `복원했습니다: 경험 ${np.experiences.length}개, 자기소개서 ${np.letters.length}개, 공고 ${np.postings.length}개`; onRestore && onRestore(np); }
     catch (err) { w.querySelector('#bk-msg').textContent = '복원하지 못했습니다. ' + err.message; }
   };
   w.querySelector('#bk-save').focus();
 }
+
+// ---------- 채용 일정 ----------
+export const STATUSES = [
+  { id: 'interest', name: '관심' }, { id: 'writing', name: '작성 중' }, { id: 'submitted', name: '제출 완료' },
+  { id: 'passed', name: '서류 합격' }, { id: 'closed', name: '불합격·종료' },
+];
+export const statusName = id => (STATUSES.find(s => s.id === id) || STATUSES[0]).name;
+const pad = n => String(n).padStart(2, '0');
+export const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+export function parseDeadline(v) { // 'YYYY-MM-DDTHH:MM' (현지 시각)
+  if (!v) return null; const [d, t = '23:59'] = v.split('T'); const [y, m, dd] = d.split('-').map(Number); const [hh, mm] = t.split(':').map(Number);
+  return new Date(y, m - 1, dd, hh, mm);
+}
+export function dday(v, now = new Date()) {
+  const d = parseDeadline(v); if (!d) return null;
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()), b = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((a - b) / 86400000);
+}
+export const ddayLabel = n => n == null ? '' : n === 0 ? 'D-day' : n > 0 ? `D-${n}` : `D+${-n}`;

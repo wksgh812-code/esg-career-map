@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>채용 달력 · ESG 커리어 맵</title>
+<meta name="description" content="지원할 채용공고의 접수 시작일과 마감 일시를 달력으로 관리하고 자기소개서와 연결합니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/base.css">
+<style>
+/* 상태 색: 관심(회색) 작성 중(주황) 제출(청록) 합격(초록) 종료(흐림). 색과 함께 상태 이름을 늘 표시 */
+:root{--st-interest:#5d6b67;--st-writing:#a35a00;--st-submitted:#0d6b5c;--st-passed:#1f7a3d;--st-closed:#9aa6a2;--sun:#b3261e;--sat:#2a5db0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--st-interest:#93a39e;--st-writing:#f0a64a;--st-submitted:#4fc2ac;--st-passed:#6fcf8f;--st-closed:#5b6864;--sun:#f2867d;--sat:#8fb3f0}}
+:root[data-theme="dark"]{--st-interest:#93a39e;--st-writing:#f0a64a;--st-submitted:#4fc2ac;--st-passed:#6fcf8f;--st-closed:#5b6864;--sun:#f2867d;--sat:#8fb3f0}
+.cal-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cal-head h1{margin:0;min-width:150px}
+.cal-head .grow{flex:1}
+.banner{background:var(--job-soft);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:13.5px}
+.banner b{color:var(--job)}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--line);gap:1px}
+.dow{background:var(--bg);font-size:12px;font-weight:600;color:var(--muted);text-align:center;padding:6px 0}
+.dow.sun{color:var(--sun)}.dow.sat{color:var(--sat)}
+.day{background:var(--surface);min-height:112px;padding:6px;display:flex;flex-direction:column;gap:3px;min-width:0;cursor:pointer;border:0;text-align:left;font:inherit;color:inherit}
+.day:hover{background:var(--bg)}
+.day.out{background:var(--bg);opacity:.55}
+.day .dn{font-family:var(--mono);font-size:12.5px;display:flex;justify-content:space-between;align-items:center}
+.day.sun .dn b{color:var(--sun)}.day.sat .dn b{color:var(--sat)}
+.day.today .dn b{background:var(--accent);color:var(--surface);border-radius:999px;padding:0 6px}
+.day.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+.ev{display:block;font-size:11.5px;line-height:1.35;border-radius:5px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid var(--c,var(--st-interest));background:var(--bg)}
+.ev.dl{font-weight:600}
+.ev.st{border-left-style:dashed;color:var(--muted)}
+.ev.closed{opacity:.55;text-decoration:line-through}
+.more{font-size:11px;color:var(--muted)}
+.dots{display:none;gap:3px;flex-wrap:wrap}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--c)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);align-items:center}
+.legend span{display:inline-flex;gap:5px;align-items:center}
+.legend i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.dl-list{list-style:none;margin:0;padding:0;overflow:auto;flex:1}
+.pitem{display:grid;grid-template-columns:52px 1fr;gap:2px 10px;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer;background:transparent;border-left:0;border-right:0;border-top:0;width:100%;text-align:left;font:inherit;color:inherit}
+.pitem:hover{background:var(--bg)}
+.pitem .dd{grid-row:span 2;font-family:var(--mono);font-size:13px;font-weight:500;border-radius:8px;padding:6px 0;text-align:center;background:var(--bg);align-self:start}
+.pitem .dd.hot{background:var(--bad-soft);color:var(--bad)}
+.pitem .dd.warm{background:var(--job-soft);color:var(--job)}
+.pitem .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitem .sub{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stchip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;border-radius:999px;padding:0 7px;border:1px solid var(--c);color:var(--c)}
+.daylist{display:grid;gap:8px}
+.warn{display:grid;gap:4px;font-size:13px}
+.warn p{margin:0;padding:6px 10px;border-radius:8px;background:var(--job-soft)}
+.warn p.bad{background:var(--bad-soft)}
+.letters{display:grid;gap:6px}
+.letters a{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);font-size:13.5px}
+.letters a span{color:var(--muted);font-family:var(--mono);font-size:12px}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+@media (max-width:760px){
+  .day{min-height:58px;padding:4px}
+  .day .ev,.day .more{display:none}
+  .day .dots{display:flex}
+  .dow{font-size:11px}
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <a class="brand" href="./">ESG 커리어 맵 <small>사회공헌백서 2022–2025 기반</small></a>
+  <nav class="nav" aria-label="주 메뉴">
+    <a href="./">ESG 기업</a>
+    <a href="experiences.html">경험 키워드</a>
+    <a href="coverletter.html">자기소개서</a>
+    <a href="calendar.html" aria-current="page">채용 달력</a>
+    <a href="guide-market.html">채용 가이드</a>
+  </nav>
+  <div class="top-tools">
+    <button class="btn ghost" id="ics" type="button">캘린더 파일 받기</button>
+    <button class="btn ghost" id="backup" type="button">백업·복원</button>
+  </div>
+</div></header>
+
+<div class="app">
+  <aside class="side" aria-label="마감 임박 공고">
+    <div class="side-head">
+      <div class="row" style="justify-content:space-between"><h2>다가오는 마감 <span class="num" id="up-n" style="color:var(--muted);font-weight:400"></span></h2>
+        <button class="btn primary" id="new" type="button">+ 공고 추가</button></div>
+      <div class="filters" id="filters"></div>
+    </div>
+    <ul class="dl-list" id="list"></ul>
+  </aside>
+  <main class="main"><div class="page" style="max-width:1100px">
+    <div class="cal-head">
+      <h1 id="month"></h1>
+      <div class="row"><button class="btn" id="prev" type="button" aria-label="이전 달">‹</button><button class="btn" id="today" type="button">오늘</button><button class="btn" id="next" type="button" aria-label="다음 달">›</button></div>
+      <span class="grow"></span>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="banner" id="banner" hidden></div>
+    <div class="grid" id="grid" role="grid" aria-label="월간 달력"></div>
+    <p class="note">굵은 칸은 마감, 점선 칸은 접수 시작입니다. 날짜를 누르면 그날 일정이 아래에 나옵니다.</p>
+    <section class="panel" id="daypanel" aria-live="polite"></section>
+  </div></main>
+</div>
+
+<script type="module">
+import { load, save, uid, esc, toast, setHeaderHeight, openBackup, STATUSES, statusName, ymd, parseDeadline, dday, ddayLabel, downloadFile } from './assets/store.js';
+
+let P = load();
+const $ = s => document.querySelector(s);
+setHeaderHeight();
+const now = new Date();
+let view = new Date(now.getFullYear(), now.getMonth(), 1);
+let selDay = ymd(now);
+let filter = 'active';
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+const SRC = '「2026 하반기 채용 완벽정복 · 자소설닷컴」';
+
+// 처음 방문하면 예시 공고 하나 (수정하면 예시 표시가 사라짐)
+if (!P.postings.length && !P.seededPostings) {
+  P.seededPostings = true;
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 9), s = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 4);
+  P.postings.push({ id: uid(), example: true, company: 'SK텔레콤', title: '[예시] 신입 공채', role: 'ESG 사업 기획', start: ymd(s), deadline: ymd(d) + 'T18:00', url: '', memo: '예시 공고입니다. 눌러서 고치거나 삭제하세요.', status: 'writing', updatedAt: new Date().toISOString() });
+  save(P);
+}
+
+const letterOf = p => P.letters.filter(l => l.postingId === p.id);
+const persist = msg => { save(P); if (msg) toast(msg); render(); };
+
+function renderLegend() {
+  $('#legend').innerHTML = STATUSES.map(s => `<span style="--c:var(--st-${s.id})"><i></i>${s.name}</span>`).join('');
+  $('#filters').innerHTML = [['active', '진행 중'], ['all', '전체'], ...STATUSES.map(s => [s.id, s.name])]
+    .map(([k, n]) => `<button class="chip" type="button" data-f="${k}" aria-pressed="${filter === k}">${n}</button>`).join('');
+}
+function matches(p) { return filter === 'all' ? true : filter === 'active' ? !['closed', 'passed'].includes(p.status) : p.status === filter; }
+
+function renderList() {
+  const items = P.postings.filter(matches).sort((a, b) => (a.deadline || '9').localeCompare(b.deadline || '9'));
+  const up = items.filter(p => (dday(p.deadline) ?? 0) >= 0), past = items.filter(p => (dday(p.deadline) ?? 0) < 0);
+  $('#up-n').textContent = up.length;
+  const li = p => {
+    const n = dday(p.deadline), d = parseDeadline(p.deadline);
+    const cls = n != null && n >= 0 && n <= 3 ? 'hot' : n != null && n >= 0 && n <= 7 ? 'warm' : '';
+    const ls = letterOf(p);
+    return `<li><button class="pitem" type="button" data-open="${p.id}"><span class="dd ${cls}">${ddayLabel(n) || '—'}</span>
+      <span class="nm">${esc(p.company || '기업 미입력')} · ${esc(p.title || '공고')}</span>
+      <span class="sub"><span class="stchip" style="--c:var(--st-${p.status})">${statusName(p.status)}</span> ${d ? `${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]}) ${p.deadline.slice(11)}` : '마감일 미입력'}${ls.length ? ` · 자소서 ${ls.length}` : ''}</span></button></li>`;
+  };
+  $('#list').innerHTML = (up.length ? up.map(li).join('') : '<li class="empty">다가오는 마감이 없습니다. "+ 공고 추가"로 지원할 공고를 등록하세요.</li>')
+    + (past.length ? `<li class="empty" style="text-align:left;padding:10px 16px 4px">지난 마감</li>` + past.reverse().map(li).join('') : '');
+}
+
+function eventsByDay() {
+  const m = {};
+  const add = (k, e) => (m[k] ||= []).push(e);
+  P.postings.forEach(p => {
+    if (p.deadline) add(p.deadline.slice(0, 10), { p, kind: 'dl' });
+    if (p.start && p.start !== (p.deadline || '').slice(0, 10)) add(p.start, { p, kind: 'st' });
+  });
+  Object.values(m).forEach(a => a.sort((x, y) => (x.kind === 'dl' ? 0 : 1) - (y.kind === 'dl' ? 0 : 1) || (x.p.deadline || '').localeCompare(y.p.deadline || '')));
+  return m;
+}
+
+function renderGrid() {
+  const y = view.getFullYear(), mo = view.getMonth();
+  $('#month').textContent = `${y}년 ${mo + 1}월`;
+  const b = $('#banner');
+  if (mo === 8) { b.hidden = false; b.innerHTML = `<b>9월은 하반기 공고가 가장 몰리는 달입니다.</b> 하반기 공고의 약 4분의 1이 9월에 나오고, 공고 후 마감까지는 보통 2주 안팎입니다. 8월 안에 경험 정리와 초안을 끝내 두세요. <span class="note">출처: ${SRC}</span>`; }
+  else if (mo === 7) { b.hidden = false; b.innerHTML = `<b>8월은 9월 공고를 준비하는 달입니다.</b> 9월에 공고가 몰리면 고를 여유가 없습니다. 목표 기업의 작년 공고 달을 확인해 그 전달을 자기소개서 마감으로 잡으세요. <span class="note">출처: ${SRC}</span>`; }
+  else b.hidden = true;
+  const first = new Date(y, mo, 1), startOff = first.getDay();
+  const cells = Math.ceil((startOff + new Date(y, mo + 1, 0).getDate()) / 7) * 7;
+  const ev = eventsByDay(), today = ymd(now);
+  let html = WD.map((w, i) => `<div class="dow ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}" role="columnheader">${w}</div>`).join('');
+  for (let i = 0; i < cells; i++) {
+    const d = new Date(y, mo, 1 - startOff + i), k = ymd(d), list = ev[k] || [];
+    const shown = list.slice(0, 3);
+    html += `<button type="button" class="day ${d.getMonth() !== mo ? 'out' : ''} ${d.getDay() === 0 ? 'sun' : d.getDay() === 6 ? 'sat' : ''} ${k === today ? 'today' : ''} ${k === selDay ? 'sel' : ''}" data-day="${k}" aria-label="${d.getMonth() + 1}월 ${d.getDate()}일, 일정 ${list.length}개">
+      <span class="dn"><b>${d.getDate()}</b>${list.length > 3 ? `<span class="more">+${list.length - 3}</span>` : ''}</span>
+      ${shown.map(({ p, kind }) => `<span class="ev ${kind} ${p.status === 'closed' ? 'closed' : ''}" style="--c:var(--st-${p.status})" data-open="${p.id}" title="${esc(p.company)} ${esc(p.title)}">${kind === 'dl' ? `${p.deadline.slice(11)} 마감` : '시작'} · ${esc(p.company || '기업')}</span>`).join('')}
+      <span class="dots">${list.map(({ p }) => `<i style="--c:var(--st-${p.status})"></i>`).join('')}</span></button>`;
+  }
+  $('#grid').innerHTML = html;
+}
+
+function renderDay() {
+  const ev = eventsByDay()[selDay] || [];
+  const [y, m, d] = selDay.split('-').map(Number), wd = WD[new Date(y, m - 1, d).getDay()];
+  $('#daypanel').innerHTML = `<div class="panel-head"><h2>${m}월 ${d}일 (${wd})</h2><button class="btn" type="button" id="add-day">이날 마감으로 추가</button></div>
+    <div class="daylist">${ev.length ? ev.map(({ p, kind }) => `<button class="pitem" type="button" data-open="${p.id}" style="border:1px solid var(--line);border-radius:10px">
+      <span class="dd">${kind === 'dl' ? '마감' : '시작'}</span><span class="nm">${esc(p.company || '기업 미입력')} · ${esc(p.title || '공고')}</span>
+      <span class="sub"><span class="stchip" style="--c:var(--st-${p.status})">${statusName(p.status)}</span> ${kind === 'dl' ? p.deadline.slice(11) + ' 마감' : '접수 시작'}${p.role ? ' · ' + esc(p.role) : ''}</span></button>`).join('') : '<p class="note">이날 일정이 없습니다.</p>'}</div>`;
+  $('#add-day').onclick = () => openEditor(null, { deadline: selDay + 'T23:59' });
+}
+
+function render() { renderLegend(); renderList(); renderGrid(); renderDay(); }
+
+// ---------- 공고 편집 ----------
+function warnings(p) {
+  const out = [], d = parseDeadline(p.deadline);
+  if (!d) return out;
+  const n = dday(p.deadline);
+  if (d.getDay() === 0 || d.getDay() === 1) out.push(['', `${WD[d.getDay()]}요일 마감입니다. 마감의 절반이 일·월요일에 몰리니, 주말에 몰아 쓰지 않도록 금요일까지 초안을 끝내세요.`]);
+  const hm = p.deadline.slice(11);
+  if (hm && hm < '23:00') out.push(['bad', `자정이 아니라 ${hm}에 마감합니다. 마감일 낮까지 제출하세요.`]);
+  const ls = letterOf(p);
+  if (n != null && n >= 0 && n <= 7 && ['interest', 'writing'].includes(p.status) && !ls.some(l => (l.body || '').length > 0)) out.push(['bad', `마감 ${n === 0 ? '당일' : n + '일 전'}인데 작성한 자기소개서가 없습니다.`]);
+  return out;
+}
+function openEditor(id, preset = {}) {
+  const isNew = !id;
+  const p = isNew ? { id: uid(), company: '', title: '', role: '', start: '', deadline: '', url: '', memo: '', status: 'interest', ...preset } : { ...P.postings.find(x => x.id === id) };
+  const [dd, dt] = (p.deadline || '').split('T');
+  const w = document.createElement('div'); w.className = 'modal';
+  w.innerHTML = `<form class="modal-box" role="dialog" aria-modal="true" aria-labelledby="ed-t" style="max-width:600px">
+    <div class="row" style="justify-content:space-between"><h2 id="ed-t">${isNew ? '공고 추가' : '공고 편집'}</h2>${p.example ? '<span class="tag warn">예시</span>' : ''}</div>
+    <div class="grid2">
+      <label class="field"><span>기업·기관</span><input class="input" id="e-company" list="orgs" required value="${esc(p.company)}" placeholder="예: 삼성전자"></label>
+      <label class="field"><span>공고명</span><input class="input" id="e-title" value="${esc(p.title)}" placeholder="예: 2026 하반기 신입 공채"></label>
+      <label class="field"><span>지원 직무</span><input class="input" id="e-role" value="${esc(p.role)}" placeholder="예: ESG 기획"></label>
+      <label class="field"><span>상태</span><select class="select" id="e-status">${STATUSES.map(s => `<option value="${s.id}" ${s.id === p.status ? 'selected' : ''}>${s.name}</option>`).join('')}</select></label>
+      <label class="field"><span>접수 시작일</span><input class="input" id="e-start" type="date" value="${esc(p.start)}"></label>
+      <div class="field"><span>마감 일시 <small>시각까지 꼭 확인하세요</small></span><div class="row" style="flex-wrap:nowrap"><input class="input" id="e-dd" type="date" required value="${esc(dd || '')}"><input class="input" id="e-dt" type="time" value="${esc(dt || '23:59')}" style="width:120px"></div></div>
+    </div>
+    <label class="field"><span>공고 링크</span><input class="input" id="e-url" type="url" value="${esc(p.url)}" placeholder="https://"></label>
+    <label class="field"><span>메모</span><textarea class="textarea" id="e-memo" rows="2" style="min-height:0">${esc(p.memo)}</textarea></label>
+    <div class="warn" id="e-warn"></div>
+    ${isNew ? '' : `<div class="field"><span>이 공고의 자기소개서</span><div class="letters">${letterOf(p).map(l => `<a href="coverletter.html#${l.id}">${esc(l.question || '문항 미입력')}<span>${(l.body || '').length}${l.limit ? '/' + l.limit : ''}자</span></a>`).join('') || '<span class="note">아직 없습니다.</span>'}</div>
+      <div><button class="btn" type="button" id="e-letter">+ 자기소개서 문항 만들기</button></div></div>`}
+    <p class="ai-err" id="e-err"></p>
+    <div class="row" style="justify-content:space-between">
+      <div>${isNew ? '' : '<button class="btn danger" type="button" id="e-del">삭제</button>'} ${p.url ? `<a class="btn ghost" href="${esc(p.url)}" target="_blank" rel="noopener">공고 열기 ↗</a>` : ''}</div>
+      <div class="row"><button class="btn" type="button" id="e-cancel">취소</button><button class="btn primary" type="submit">저장</button></div>
+    </div></form>`;
+  document.body.appendChild(w);
+  const f = w.querySelector('form'), g = s => w.querySelector(s);
+  const read = () => ({ ...p, company: g('#e-company').value.trim(), title: g('#e-title').value.trim(), role: g('#e-role').value.trim(), status: g('#e-status').value,
+    start: g('#e-start').value, deadline: g('#e-dd').value ? `${g('#e-dd').value}T${g('#e-dt').value || '23:59'}` : '', url: g('#e-url').value.trim(), memo: g('#e-memo').value });
+  const paintWarn = () => { g('#e-warn').innerHTML = warnings(read()).map(([c, t]) => `<p class="${c}">${esc(t)}</p>`).join(''); };
+  f.addEventListener('input', paintWarn); paintWarn();
+  const close = () => w.remove();
+  w.addEventListener('click', ev => { if (ev.target === w) close(); });
+  w.addEventListener('keydown', ev => { if (ev.key === 'Escape') close(); });
+  g('#e-cancel').onclick = close;
+  const commit = () => {
+    const v = read();
+    if (!v.company) { g('#e-err').textContent = '기업·기관 이름을 입력하세요.'; return null; }
+    if (!v.deadline) { g('#e-err').textContent = '마감일을 입력하세요.'; return null; }
+    delete v.example; v.updatedAt = new Date().toISOString();
+    const i = P.postings.findIndex(x => x.id === v.id); if (i >= 0) P.postings[i] = v; else P.postings.push(v);
+    return v;
+  };
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); const v = commit(); if (!v) return;
+    view = new Date(+v.deadline.slice(0, 4), +v.deadline.slice(5, 7) - 1, 1); selDay = v.deadline.slice(0, 10);
+    close(); persist(isNew ? '공고를 추가했습니다' : '저장했습니다');
+  });
+  if (!isNew) {
+    g('#e-letter').onclick = () => {
+      const v = commit(); if (!v) return;
+      const l = { id: uid(), company: v.company, role: v.role, question: '', limit: 1000, body: '', expIds: [], postingId: v.id, updatedAt: new Date().toISOString() };
+      P.letters.push(l); save(P); location.href = 'coverletter.html#' + l.id;
+    };
+    g('#e-del').onclick = ev => {
+      const b = ev.currentTarget;
+      if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = '한 번 더 누르면 삭제'; return; }
+      P.postings = P.postings.filter(x => x.id !== p.id); P.letters.forEach(l => { if (l.postingId === p.id) delete l.postingId; });
+      close(); persist('공고를 삭제했습니다');
+    };
+  }
+  setTimeout(() => g(isNew && !p.company ? '#e-company' : '#e-dd').focus(), 0);
+}
+
+// ---------- 캘린더 파일 (.ics) ----------
+function icsText() {
+  const escT = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const loc = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}00`;
+  const day = s => s.replace(/-/g, '');
+  const fold = line => { const out = []; let cur = ''; for (const ch of line) { if (new TextEncoder().encode(cur + ch).length > 73) { out.push(cur); cur = ' ' + ch; } else cur += ch; } out.push(cur); return out.join('\r\n'); };
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ESG Career Map//Recruit Calendar//KO', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:채용 달력',
+    'BEGIN:VTIMEZONE', 'TZID:Asia/Seoul', 'BEGIN:STANDARD', 'DTSTART:19700101T000000', 'TZOFFSETFROM:+0900', 'TZOFFSETTO:+0900', 'TZNAME:KST', 'END:STANDARD', 'END:VTIMEZONE'];
+  P.postings.filter(p => p.status !== 'closed' && p.deadline).forEach(p => {
+    const end = parseDeadline(p.deadline), begin = new Date(end.getTime() - 60 * 60000);
+    const name = `${p.company}${p.title ? ' · ' + p.title : ''}`;
+    const desc = [p.role && `직무: ${p.role}`, `상태: ${statusName(p.status)}`, p.url && `공고: ${p.url}`, p.memo].filter(Boolean).join('\n');
+    L.push('BEGIN:VEVENT', `UID:${p.id}-deadline@esg-career-map`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Asia/Seoul:${loc(begin)}`, `DTEND;TZID=Asia/Seoul:${loc(end)}`,
+      `SUMMARY:${escT('[마감] ' + name)}`, `DESCRIPTION:${escT(desc)}`, ...(p.url ? [`URL:${escT(p.url)}`] : []),
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:-P1D', `DESCRIPTION:${escT('내일 마감: ' + name)}`, 'END:VALARM',
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:-PT3H', `DESCRIPTION:${escT('3시간 뒤 마감: ' + name)}`, 'END:VALARM', 'END:VEVENT');
+    if (p.start) {
+      const nd = new Date(+p.start.slice(0, 4), +p.start.slice(5, 7) - 1, +p.start.slice(8, 10) + 1);
+      L.push('BEGIN:VEVENT', `UID:${p.id}-start@esg-career-map`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${day(p.start)}`, `DTEND;VALUE=DATE:${day(ymd(nd))}`, `SUMMARY:${escT('[접수 시작] ' + name)}`, 'TRANSP:TRANSPARENT', 'END:VEVENT');
+    }
+  });
+  L.push('END:VCALENDAR');
+  return L.map(fold).join('\r\n') + '\r\n';
+}
+$('#ics').onclick = () => {
+  const n = P.postings.filter(p => p.status !== 'closed' && p.deadline).length;
+  if (!n) { toast('내보낼 공고가 없습니다'); return; }
+  const url = URL.createObjectURL(new Blob([icsText()], { type: 'text/calendar;charset=utf-8' }));
+  const a = document.createElement('a'); a.href = url; a.download = `recruit-calendar-${ymd(new Date())}.ics`; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+  toast(`공고 ${n}개를 캘린더 파일로 받았습니다. 구글·애플 캘린더에서 가져오기 하세요`);
+};
+
+// ---------- 이벤트 ----------
+document.addEventListener('click', ev => {
+  const o = ev.target.closest('[data-open]'); if (o) { ev.stopPropagation(); openEditor(o.dataset.open); return; }
+  const d = ev.target.closest('[data-day]'); if (d) { selDay = d.dataset.day; renderGrid(); renderDay(); if (window.innerWidth <= 760) $('#daypanel').scrollIntoView({ block: 'nearest' }); return; }
+  const f = ev.target.closest('[data-f]'); if (f) { filter = f.dataset.f; renderLegend(); renderList(); }
+});
+$('#prev').onclick = () => { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); renderGrid(); };
+$('#next').onclick = () => { view = new Date(view.getFullYear(), view.getMonth() + 1, 1); renderGrid(); };
+$('#today').onclick = () => { view = new Date(now.getFullYear(), now.getMonth(), 1); selDay = ymd(now); renderGrid(); renderDay(); };
+$('#new').onclick = () => openEditor(null);
+$('#backup').onclick = () => openBackup(P, np => { P = np; render(); });
+window.addEventListener('storage', ev => { if (ev.key === 'ecm-profile-v1') { P = load(); render(); } });
+
+// 기업명 자동완성
+const dl = document.createElement('datalist'); dl.id = 'orgs'; document.body.appendChild(dl);
+fetch('programs.json').then(r => r.json()).then(d => { dl.innerHTML = [...new Set(d.map(p => p.org))].sort((a, b) => a.localeCompare(b, 'ko')).map(n => `<option value="${esc(n)}"></option>`).join(''); }).catch(() => {});
+
+render();
+// ESG 기업 페이지의 [달력에 추가]에서 넘어온 경우
+const q = new URLSearchParams(location.search);
+if (q.get('company')) { openEditor(null, { company: q.get('company') }); history.replaceState(null, '', location.pathname); }
+</script>
+</body>
+</html>

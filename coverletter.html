@@ -52,6 +52,7 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
     <a href="./">ESG 기업</a>
     <a href="experiences.html">경험 키워드</a>
     <a href="coverletter.html" aria-current="page">자기소개서</a>
+    <a href="calendar.html">채용 달력</a>
     <a href="guide-market.html">채용 가이드</a>
   </nav>
   <div class="top-tools">
@@ -73,7 +74,7 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 <datalist id="orgs"></datalist>
 
 <script type="module">
-import { COMPETENCIES, compName, load, save, uid, strengths, expSummary, toast, esc, setHeaderHeight, openBackup, ensureExamples, keywordUsed } from './assets/store.js';
+import { COMPETENCIES, compName, load, save, uid, strengths, expSummary, toast, esc, setHeaderHeight, openBackup, ensureExamples, keywordUsed, dday, ddayLabel, statusName } from './assets/store.js';
 import { bindSettingsButton, hasKey, streamText, json, errorMessage, md } from './assets/ai.js';
 
 let P = load();
@@ -154,7 +155,7 @@ function render() {
   $('#page').innerHTML = `<div class="cl">
   <section class="page" style="max-width:none;margin:0" aria-label="작성">
     <div class="row" style="justify-content:space-between;align-items:flex-end">
-      <div><div class="eyebrow">자기소개서${l.example ? ' · 예시 문항' : ''}</div><h1 id="ttl">${esc(l.company || '새 자기소개서')}</h1></div>
+      <div><div class="eyebrow">자기소개서${l.example ? ' · 예시 문항' : ''}</div><h1 id="ttl">${esc(l.company || '새 자기소개서')}</h1>${postingLine(l)}</div>
       <div class="row"><span class="note" id="save-state">이 브라우저에 저장됨</span><button class="btn danger" id="del" type="button">삭제</button></div>
     </div>
     <div class="panel">
@@ -214,6 +215,12 @@ function render() {
   paintMeter(); paintChecks(); paintStrength(); paintCSR(); renderList();
 }
 
+function postingLine(l) {
+  const p = (P.postings || []).find(x => x.id === l.postingId);
+  if (!p) return '';
+  const n = dday(p.deadline);
+  return `<a class="note" href="calendar.html" style="text-decoration:none">연결된 공고: ${esc(p.title || p.company)} · <b style="color:${n != null && n >= 0 && n <= 3 ? 'var(--bad)' : 'var(--accent)'}">${ddayLabel(n)}</b> (${esc((p.deadline || '').replace('T', ' '))} 마감, ${statusName(p.status)})</a>`;
+}
 function paintMeter() {
   const l = letter(); const b = l.body || ''; const n = b.length, ns = b.replace(/\s/g, '').length;
   const lim = l.limit || 0, pct = lim ? Math.min(100, n / lim * 100) : 0;
