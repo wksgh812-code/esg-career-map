@@ -3,8 +3,30 @@
 import Anthropic from '../vendor/anthropic-sdk-1.7.0.mjs';
 import { esc } from './store.js';
 
-const MODEL = 'claude-opus-5-5';
 const KEY_NAME = 'ecm-ai-key';
+const MODEL_NAME = 'ecm-ai-model';
+
+// 고를 수 있는 모델과 100만 토큰당 가격(달러). Haiku 5.5 가격은 요청당 입력 10만 토큰 이하 기준.
+export const MODELS = [
+  { id: 'claude-opus-5-5', name: 'Claude Opus 5.5', short: 'Opus 5.5', in: 4, out: 20, desc: '가장 정확합니다. 코칭·피드백의 질이 가장 좋습니다.', fallback: true },
+  { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', short: 'Sonnet 5.5', in: 2, out: 10, desc: 'Opus의 절반 가격입니다. 대부분의 작업에 충분합니다.', fallback: true },
+  { id: 'claude-haiku-5-5', name: 'Claude Haiku 5.5', short: 'Haiku 5.5', in: 0.10, out: 0.50, desc: '가장 저렴하고 빠릅니다. 키워드 제안·문장 점검에 적합하고, 깊은 피드백은 다소 약할 수 있습니다.', fallback: false },
+];
+// 기능별 1회 사용 예상 토큰 (입력, 출력). 글 길이와 경험 수에 따라 달라지는 대략값
+const USAGE = [
+  ['경험 키워드 AI 제안', 2000, 1500], ['문장 점검', 5000, 2500], ['작성 코칭·작성 제안', 5000, 4000], ['종합 피드백', 5000, 4500],
+];
+const USD_KRW = 1400; // 원화 환산용 대략 환율
+
+export function getModel() {
+  let id = '';
+  try { id = localStorage.getItem(MODEL_NAME) || ''; } catch (e) { /* 저장소 사용 불가 */ }
+  return MODELS.find(m => m.id === id) || MODELS[0];
+}
+function setModel(id) { try { localStorage.setItem(MODEL_NAME, id); } catch (e) { /* 무시 */ } }
+function costRows(m) {
+  return USAGE.map(([name, i, o]) => { const usd = (i * m.in + o * m.out) / 1e6; return [name, usd, Math.round(usd * USD_KRW)]; });
+}
 
 export function getKey() {
   try { return sessionStorage.getItem(KEY_NAME) || localStorage.getItem(KEY_NAME) || ''; } catch (e) { return ''; }
@@ -23,11 +45,12 @@ function client() {
   return new Anthropic({ apiKey, dangerouslyAllowBrowser: true, maxRetries: 2 });
 }
 
-const BASE = {
-  model: MODEL,
-  betas: ['server-side-fallback-2026-07-01'],
-  fallbacks: 'default',
-};
+// 고른 모델로 요청 기본값을 만든다. Opus·Sonnet은 답을 거절하면 서버가 다른 모델로 다시 시도(fallbacks),
+// Haiku 5.5는 이 기능이 없어 넣지 않는다.
+function base() {
+  const m = getModel();
+  return m.fallback ? { model: m.id, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : { model: m.id };
+}
 
 export function errorMessage(e) {
   if (e && e.message === 'NO_KEY') return 'AI 기능을 쓰려면 먼저 상단의 "AI 설정"에서 Claude API 키를 입력하세요.';
@@ -47,7 +70,7 @@ function checkStop(msg) {
 // 긴 글: 스트리밍으로 받아 화면에 바로 표시
 export async function streamText({ system, prompt, effort = 'medium', onText }) {
   const stream = client().beta.messages.stream({
-    ...BASE, max_tokens: 64000, output_config: { effort }, system,
+    ...base(), max_tokens: 64000, output_config: { effort }, system,
     messages: [{ role: 'user', content: prompt }],
   });
   let acc = '';
@@ -61,7 +84,7 @@ export async function streamText({ system, prompt, effort = 'medium', onText }) 
 // 구조화 결과: JSON 스키마에 맞춘 응답
 export async function json({ system, prompt, schema, effort = 'medium' }) {
   const msg = await client().beta.messages.create({
-    ...BASE, max_tokens: 16000, system,
+    ...base(), max_tokens: 16000, system,
     output_config: { effort, format: { type: 'json_schema', schema } },
     messages: [{ role: 'user', content: prompt }],
   });
@@ -93,6 +116,7 @@ export function md(src) {
 // AI 설정 대화 상자
 export function openSettings(onChange) {
   const cur = getKey();
+  const model = getModel();
   let remembered = false;
   try { remembered = !!localStorage.getItem(KEY_NAME); } catch (e) { /* 무시 */ }
   const wrap = document.createElement('div');
@@ -103,6 +127,15 @@ export function openSettings(onChange) {
     <label class="field"><span>Claude API 키</span>
       <input id="ai-key" class="input" type="password" autocomplete="off" placeholder="sk-ant-로 시작하는 키" value="${esc(cur)}"></label>
     <label class="row" style="font-size:14px"><input id="ai-remember" type="checkbox" ${remembered ? 'checked' : ''}> 이 브라우저에 기억하기 (체크하지 않으면 창을 닫을 때 지워짐)</label>
+    <fieldset class="field" style="border:0;padding:0;margin:0"><legend style="font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:4px">모델</legend>
+      <div style="display:grid;gap:6px">${MODELS.map(m => `<label style="display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:start;border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer">
+        <input type="radio" name="ai-model" value="${m.id}" ${m.id === model.id ? 'checked' : ''} style="margin-top:4px">
+        <span><b>${m.name}</b><br><span class="note">${m.desc}</span></span>
+        <span class="note num" style="text-align:right;white-space:nowrap">입력 $${m.in}<br>출력 $${m.out}</span></label>`).join('')}</div>
+      <p class="note" style="margin:0">가격은 100만 토큰당 달러입니다.</p></fieldset>
+    <div class="field"><span>한 번 누를 때 예상 비용 <small id="ai-cost-m"></small></span>
+      <table style="width:100%;border-collapse:collapse;font-size:13px" id="ai-cost"></table>
+      <p class="note" style="margin:0">대략값입니다. 글 길이와 선택한 경험 수에 따라 달라지며, 원화는 1달러 ${USD_KRW.toLocaleString()}원으로 환산했습니다. 실제 사용량은 Claude Console의 Usage에서 확인하세요.</p></div>
     <p class="note">키와 작성한 글은 이 사이트의 서버나 GitHub 저장소로 보내지지 않습니다. AI 기능 버튼을 누를 때만 해당 내용이 Anthropic API로 전송됩니다. 공용 컴퓨터에서는 기억하기를 켜지 마세요. 키는 <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Claude Console</a>에서 발급합니다.</p>
     <div class="row" style="justify-content:flex-end">
       <button class="btn danger" id="ai-del" type="button" ${cur ? '' : 'hidden'}>키 삭제</button>
@@ -111,6 +144,14 @@ export function openSettings(onChange) {
     </div></div>`;
   document.body.appendChild(wrap);
   const close = () => { wrap.remove(); onChange && onChange(); };
+  const paintCost = () => {
+    const id = (wrap.querySelector('input[name="ai-model"]:checked') || {}).value;
+    const m = MODELS.find(x => x.id === id) || model;
+    wrap.querySelector('#ai-cost-m').textContent = `· ${m.short}`;
+    wrap.querySelector('#ai-cost').innerHTML = costRows(m).map(([n, usd, krw]) => `<tr><td style="padding:4px 0;border-bottom:1px solid var(--line)">${n}</td><td class="num" style="text-align:right;border-bottom:1px solid var(--line)">약 $${usd < 0.01 ? usd.toFixed(4) : usd.toFixed(3)}</td><td class="num" style="text-align:right;border-bottom:1px solid var(--line);color:var(--muted)">${krw < 1 ? '1원 미만' : '약 ' + krw.toLocaleString() + '원'}</td></tr>`).join('');
+  };
+  wrap.querySelectorAll('input[name="ai-model"]').forEach(r => r.addEventListener('change', paintCost));
+  paintCost();
   wrap.querySelector('#ai-key').focus();
   wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
   wrap.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
@@ -118,12 +159,13 @@ export function openSettings(onChange) {
   wrap.querySelector('#ai-del').onclick = () => { setKey('', false); close(); };
   wrap.querySelector('#ai-save').onclick = () => {
     setKey(wrap.querySelector('#ai-key').value.trim(), wrap.querySelector('#ai-remember').checked);
+    const sel = wrap.querySelector('input[name="ai-model"]:checked'); if (sel) setModel(sel.value);
     close();
   };
 }
 
 export function bindSettingsButton(btn, onChange) {
-  const paint = () => { btn.textContent = hasKey() ? 'AI 설정 · 연결됨' : 'AI 설정'; btn.classList.toggle('primary', !hasKey()); };
+  const paint = () => { btn.textContent = hasKey() ? `AI 설정 · ${getModel().short}` : 'AI 설정'; btn.classList.toggle('primary', !hasKey()); };
   paint();
   btn.addEventListener('click', () => openSettings(() => { paint(); onChange && onChange(); }));
 }

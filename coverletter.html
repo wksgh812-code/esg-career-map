@@ -75,13 +75,13 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 
 <script type="module">
 import { COMPETENCIES, compName, load, save, uid, strengths, expSummary, toast, esc, setHeaderHeight, openBackup, ensureExamples, keywordUsed, dday, ddayLabel, statusName, downloadFile } from './assets/store.js';
-import { bindSettingsButton, hasKey, streamText, json, errorMessage, md } from './assets/ai.js';
+import { bindSettingsButton, hasKey, streamText, json, errorMessage, md, getModel } from './assets/ai.js';
 
 let P = load();
 let cur = null, tool = null, ORG = null;
 const $ = s => document.querySelector(s);
 setHeaderHeight();
-bindSettingsButton($('#ai-set'));
+bindSettingsButton($('#ai-set'), () => { if (cur) render(); });
 
 // 사회공헌 데이터: 기업명 자동완성, 기업별 프로그램 참고, 다른 기업명 오기 점검에 사용
 fetch('programs.json').then(r => r.json()).then(d => {
@@ -221,7 +221,7 @@ function render() {
     b.dataset.armed = '1'; b.textContent = '한 번 더 누르면 삭제'; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = '삭제'; } }, 3000);
   };
   document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => runTool(b.dataset.tool));
-  $('#ai-hint').textContent = hasKey() ? '버튼을 누르면 문항·본문·선택한 경험이 Claude API로 전송됩니다.' : '상단 "AI 설정"에서 Claude API 키를 입력하면 쓸 수 있습니다.';
+  $('#ai-hint').textContent = hasKey() ? `모델: ${getModel().name}. 버튼을 누르면 문항·본문·선택한 경험이 Claude API로 전송됩니다. 모델은 상단 "AI 설정"에서 바꿀 수 있습니다.` : '상단 "AI 설정"에서 Claude API 키를 입력하면 쓸 수 있습니다.';
   let ccMode = 'coach';
   const paintType = () => { const t = qtypeOf(l.question); $('#cc-type').innerHTML = t ? `문항 유형: <b>${t.name}</b> · 권장 순서: ${esc(t.order)}` : '문항을 입력하면 유형을 알아보고 권장 답변 순서를 함께 보냅니다.'; $('#cc-preview').value = chatPrompt(l, ccMode); };
   $('#cc-modes').addEventListener('click', ev => { const b = ev.target.closest('[data-mode]'); if (!b) return; ccMode = b.dataset.mode; document.querySelectorAll('#cc-modes [data-mode]').forEach(x => x.setAttribute('aria-pressed', x === b)); paintType(); });
