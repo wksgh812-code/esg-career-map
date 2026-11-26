@@ -28,7 +28,8 @@
 *{box-sizing:border-box}
 body{margin:0}
 img{max-width:100%}
-html,body{height:100%}
+html{height:100%}
+body{min-height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.6}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
 a{color:var(--accent)}
@@ -130,6 +131,7 @@ section{display:grid;gap:12px}
     <a href="./" aria-current="page">ESG 기업</a>
     <a href="experiences.html">경험 키워드</a>
     <a href="coverletter.html">자기소개서</a>
+    <a href="guide-market.html">채용 가이드</a>
   </nav>
   <div class="qbar" role="search">
     <div class="qf"><label for="qn">기업명</label><input id="qn" type="search" placeholder="예: 삼성전자, 한국전력" autocomplete="off"><button class="qclear" data-for="qn" aria-label="기업명 지우기" hidden>×</button></div>
